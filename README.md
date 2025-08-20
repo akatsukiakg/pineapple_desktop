@@ -1,9 +1,8 @@
 Pineapple Desktop Project (Python)
 
-im a bit dumb so you need to open pineapple_desktop and after execute python -m src.app
+
 
 <pre>
-cd pineapple_desktop
 
 python -m src.app
 <pre>
