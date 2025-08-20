@@ -18,21 +18,17 @@ Structure:
 ├── README.md               
 ├── requirements.txt        
 ├── src/                  
-│   ├── __init__.py
-│   ├── app.py              # GUI launcher
-│   ├── core/               # Núcleo lógico del programa
-│   │   ├── __init__.py
-│   │   ├── pineapple.py    # SSH logic and PineAP commands
-│   │   ├── capture.py      # Wireshark/tshark integration
-│   │   └── burp.py         # Proxy/forward utilities for Burp
-│   └── ui/                 # Interfaz gráfica (tkinter)
-│       ├── __init__.py
-│       └── main_window.py  # Basic GUI (tkinter)
-├── tests/                  
-│   ├── __init__.py
-│   ├── test_pineapple.py  
-│   ├── test_capture.py     
-│   └── test_burp.py   
+   ├── __init__.py
+   ├── app.py              # GUI launcher
+   ├── core/               # Núcleo lógico del programa
+   │   ├── __init__.py
+   │   ├── pineapple.py    # SSH logic and PineAP commands
+   │   ├── capture.py      # Wireshark/tshark integration
+   │   └── burp.py         # Proxy/forward utilities for Burp
+   └── ui/                 # Interfaz gráfica (tkinter)
+       ├── __init__.py
+       └── main_window.py  # Basic GUI (tkinter)
+
 </pre>
 
 
