@@ -1,42 +1,36 @@
 Pineapple Desktop Project (Python)
 
+
+
+<pre>
+
+python -m src.app
+<pre>
+
 Objective:
-
 Desktop application in Python to control and automate a WiFi Pineapple.
-
-SSH connection, execution of PineAP commands, integration with Wireshark (tshark) and Burp Suite.
+Includes SSH connection, PineAP command execution, integration with Wireshark (tshark), and Burp Suite.
 
 Structure:
 
-pineapple_desktop/
+<pre> 
+  pineapple_desktop/
+├── README.md               
+├── requirements.txt        
+├── src/                  
+   ├── __init__.py
+   ├── app.py              # GUI launcher
+   ├── core/               # Núcleo lógico del programa
+   │   ├── __init__.py
+   │   ├── pineapple.py    # SSH logic and PineAP commands
+   │   ├── capture.py      # Wireshark/tshark integration
+   │   └── burp.py         # Proxy/forward utilities for Burp
+   └── ui/                 # Interfaz gráfica (tkinter)
+       ├── __init__.py
+       └── main_window.py  # Basic GUI (tkinter)
 
-README.md
+</pre>
 
-requirements.txt
-
-src/
-
-__init__.py
-
-app.py # GUI launcher
-
-core/
-
-__init__.py
-
-pineapple.py # SSH logic and PineAP commands
-
-capture.py # tshark/wireshark integration
-
-burp.py # Proxy/forward utilities for Burp
-
-ui/
-
-__init__.py
-
-main_window.py # Basic GUI (tkinter)
-
-tests/
 
 Requirements:
 
@@ -50,3 +44,4 @@ tkinter
 
 pytest (dev)
 
+Next step: Install dependencies and run the sample app.
