@@ -2,12 +2,16 @@
 from __future__ import annotations
 import subprocess
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict
+import threading
+import time
 
 class CaptureManager:
     def __init__(self, output_dir: Path):
         self.output_dir = Path(output_dir)
         self.process: Optional[subprocess.Popen] = None
+        self.active_captures: Dict[str, Dict] = {}
+        self._capture_counter = 0
 
     def start_tshark(self, iface: str, filename: str = "capture.pcapng", duration: Optional[int] = None) -> Path:
         out_path = self.output_dir / filename
@@ -15,7 +19,20 @@ class CaptureManager:
         if duration and duration > 0:
             # Compatible con Windows/Linux/macOS: límite por duración
             cmd += ["-a", f"duration:{int(duration)}"]
+        
         self.process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        # Track active capture
+        capture_id = f"capture_{self._capture_counter}"
+        self._capture_counter += 1
+        self.active_captures[capture_id] = {
+            "interface": iface,
+            "filename": filename,
+            "start_time": time.time(),
+            "process": self.process,
+            "status": "running"
+        }
+        
         return out_path
 
     def stop(self):
@@ -26,6 +43,20 @@ class CaptureManager:
             except Exception:
                 self.process.kill()
             self.process = None
+        
+        # Update active captures status
+        for capture_id, capture_info in self.active_captures.items():
+            if capture_info["process"] == self.process:
+                capture_info["status"] = "stopped"
+                capture_info["end_time"] = time.time()
+
+    def get_active_capture_count(self) -> int:
+        """Get number of active captures"""
+        active_count = 0
+        for capture_info in self.active_captures.values():
+            if capture_info["status"] == "running":
+                active_count += 1
+        return active_count
 
     def list_interfaces(self) -> list[str]:
         """Devuelve la lista de interfaces que reporta tshark -D."""

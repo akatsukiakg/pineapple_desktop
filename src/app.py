@@ -1,184 +1,264 @@
-"""
-Pineapple Desktop - Modern App Launcher
-A modern desktop application for WiFi Pineapple management and network security testing
+"""Pineapple Desktop Application
+Main application entry point with modern UI
 """
 
 import customtkinter as ctk
-import tkinter as tk
-from tkinter import messagebox, filedialog
+from pathlib import Path
 import threading
 import time
-import json
-import os
-from datetime import datetime
-import subprocess
-import sys
-from pathlib import Path
 
-# Import our modules
-from .core.pineapple import PineappleSSH
-from .core.capture import CaptureManager
-from .core.burp import BurpForwarder
-from .core.config import ConfigManager
-from .core.logger import Logger
+# Core imports
+from core.config import ConfigManager
+from core.logger import Logger
+from core.capture import CaptureManager
+from core.pineapple import PineappleSSH
+from core.connection_manager import ConnectionManager, ConnectionStatus
+from core.scan_manager import ScanManager
+from core.attack_manager import AttackManager
 
-# Import modern UI
-from .ui.modern_main_window import ModernMainWindow, StatusBar
+# UI imports
+from ui.modern_main_window import ModernMainWindow
+from ui.components import ConfirmationModal
 
 class PineappleDesktopApp:
     def __init__(self):
-        # Initialize backend managers
-        self.pineapple_ssh = PineappleSSH()
-        self.capture_manager = CaptureManager(Path("captures"))
-        self.burp_forwarder = BurpForwarder()
+        # Initialize core managers
         self.config_manager = ConfigManager()
         self.logger = Logger()
+        self.capture_manager = CaptureManager(Path("captures"))
         
-        # Create modern UI
-        self.root = ModernMainWindow()
+        # Initialize connection and operation managers
+        self.connection_manager = ConnectionManager(self.logger)
+        self.scan_manager = ScanManager(self.logger)
+        self.attack_manager = AttackManager(logger=self.logger)
         
-        # Add status bar
-        self.status_bar = StatusBar(self.root)
-        self.status_bar.pack(side="bottom", fill="x")
+        # Pineapple SSH connection
+        self.pineapple_ssh = None
         
-        # Connect backend to UI
-        self.connect_backend()
+        # UI
+        self.root = None
+        self.main_window = None
         
-        # Load saved configuration
-        self.load_config()
+        # Setup callbacks
+        self._setup_callbacks()
         
-    def connect_backend(self):
-        """Connect backend functionality to modern UI"""
-        
-        # Override UI methods with backend functionality
-        self.root._execute_scan = self.execute_scan
-        self.root._quick_scan = self.quick_scan
-        self.root._quick_capture = self.start_capture
-        self.root._import_pcap = self.import_pcap
-        
-    def execute_scan(self):
-        """Execute authorized scan"""
-        def scan_thread():
-            try:
-                self.log_message("Iniciando escaneo autorizado...")
-                
-                # Connect to Pineapple if not connected
-                if not self.pineapple_ssh.connected:
-                    if not self.pineapple_ssh.connect():
-                        self.log_message("Error: No se pudo conectar al Pineapple")
-                        self.show_toast("Error de conexión al Pineapple", "error")
-                        return
-                
-                # Run scan
-                result = self.pineapple_ssh.run_scan(duration=30)
-                
-                self.log_message(f"Escaneo finalizado: {result}")
-                
-                # Show success toast
-                self.show_toast("Escaneo finalizado: 12 puertos abiertos detectados.", "success")
-                
-            except Exception as e:
-                self.log_message(f"Error en escaneo: {str(e)}")
-                self.show_toast(f"Error en escaneo: {str(e)}", "error")
-        
-        threading.Thread(target=scan_thread, daemon=True).start()
+        self.logger.info("Pineapple Desktop Application initialized")
     
-    def quick_scan(self):
-        """Quick scan with confirmation"""
-        # This will trigger the confirmation modal in the UI
-        self.execute_scan()
+    def _setup_callbacks(self):
+        """Setup callbacks for manager updates"""
+        self.connection_manager.add_status_callback(self._on_connection_status_change)
+        self.connection_manager.add_device_callback(self._on_device_update)
+        self.scan_manager.add_callback(self._on_scan_update)
+        self.attack_manager.add_callback(self._on_attack_update)
+    
+    def _on_connection_status_change(self, status: ConnectionStatus, message: str):
+        """Handle connection status changes"""
+        self.logger.info(f"Connection status changed: {status.value} - {message}")
+        
+        if self.main_window:
+            # Update UI connection status
+            self.main_window.update_connection_status(status, message)
+            
+            # Update attack manager with SSH connection
+            if status == ConnectionStatus.CONNECTED and self.pineapple_ssh:
+                self.attack_manager.pineapple_ssh = self.pineapple_ssh
+            elif status == ConnectionStatus.DISCONNECTED:
+                self.attack_manager.pineapple_ssh = None
+    
+    def _on_device_update(self, devices):
+        """Handle device discovery updates"""
+        self.logger.debug(f"Device update: {len(devices)} devices found")
+        
+        if self.main_window:
+            self.main_window.update_connected_devices(devices)
+    
+    def _on_scan_update(self, scan_job):
+        """Handle scan progress updates"""
+        self.logger.debug(f"Scan update: {scan_job.scan_id} - {scan_job.status.value}")
+        
+        if self.main_window:
+            self.main_window.update_scan_status(scan_job)
+    
+    def _on_attack_update(self, attack_job):
+        """Handle attack progress updates"""
+        self.logger.debug(f"Attack update: {attack_job.attack_id} - {attack_job.status.value}")
+        
+        if self.main_window:
+            self.main_window.update_attack_status(attack_job)
+    
+    def connect_to_pineapple(self, ip: str, username: str = "root", password: str = "pineapplesareyummy"):
+        """Connect to Pineapple device"""
+        def connect_thread():
+            success = self.connection_manager.connect_to_pineapple(ip, username, password)
+            if success:
+                self.pineapple_ssh = self.connection_manager.pineapple_ssh
+                self.logger.log_user_action(f"Connected to Pineapple at {ip}")
+            else:
+                self.logger.log_user_action(f"Failed to connect to Pineapple at {ip}")
+        
+        # Show confirmation modal for security
+        if self.main_window:
+            modal = ConfirmationModal(
+                self.main_window.root,
+                title="Conectar a Pineapple",
+                message=f"¿Está seguro de que desea conectarse al dispositivo Pineapple en {ip}?\n\nEsta acción iniciará una conexión SSH y habilitará las funcionalidades de penetration testing.",
+                require_consent=True,
+                consent_text="Confirmo que tengo autorización para usar este dispositivo",
+                on_confirm=lambda: threading.Thread(target=connect_thread, daemon=True).start()
+            )
+            modal.grab_set()
+    
+    def disconnect_from_pineapple(self):
+        """Disconnect from Pineapple device"""
+        self.connection_manager.disconnect()
+        self.pineapple_ssh = None
+        self.logger.log_user_action("Disconnected from Pineapple")
+    
+    def start_scan(self, scan_type, target, options=None):
+        """Start a network scan"""
+        def scan_with_confirmation():
+            scan_id = self.scan_manager.start_scan(scan_type, target, options)
+            self.logger.log_user_action(f"Started {scan_type.value} scan on {target}")
+            return scan_id
+        
+        # Show security confirmation
+        if self.main_window:
+            modal = ConfirmationModal(
+                self.main_window.root,
+                title="Iniciar Escaneo",
+                message=f"¿Está seguro de que desea iniciar un escaneo {scan_type.value} en {target}?\n\nEsta acción puede ser detectada por sistemas de seguridad de red.",
+                require_consent=True,
+                consent_text="Confirmo que tengo autorización para escanear esta red",
+                on_confirm=scan_with_confirmation
+            )
+            modal.grab_set()
+    
+    def start_attack(self, attack_type, target, options=None):
+        """Start a penetration testing attack"""
+        def attack_with_confirmation():
+            if not self.connection_manager.is_connected():
+                if self.main_window:
+                    self.main_window.show_toast("Error: No hay conexión con Pineapple", "error")
+                return
+            
+            attack_id = self.attack_manager.start_attack(attack_type, target, options)
+            self.logger.log_user_action(f"Started {attack_type.value} attack on {target.ssid}")
+            return attack_id
+        
+        # Show security confirmation with stronger warning
+        if self.main_window:
+            modal = ConfirmationModal(
+                self.main_window.root,
+                title="⚠️ INICIAR ATAQUE",
+                message=f"ADVERTENCIA: Está a punto de iniciar un ataque {attack_type.value} contra {target.ssid}.\n\n"
+                       f"Esta acción puede:\n"
+                       f"• Interrumpir servicios de red\n"
+                       f"• Ser detectada por sistemas de seguridad\n"
+                       f"• Tener implicaciones legales\n\n"
+                       f"Use solo en redes de su propiedad o con autorización explícita.",
+                require_consent=True,
+                consent_text="Confirmo que tengo autorización legal para realizar este ataque",
+                on_confirm=attack_with_confirmation
+            )
+            modal.grab_set()
+
+        
+    def execute_scan(self, target_ip: str):
+        """Execute network scan (legacy method for compatibility)"""
+        from src.core.scan_manager import ScanType
+        self.start_scan(ScanType.PORT_SCAN, target_ip)
     
     def start_capture(self):
-        """Start packet capture"""
-        try:
-            # Connect to Pineapple if not connected
-            if not self.pineapple_ssh.connected:
-                if not self.pineapple_ssh.connect():
-                    self.log_message("Error: No se pudo conectar al Pineapple")
-                    self.show_toast("Error de conexión al Pineapple", "error")
-                    return
-            
-            # Start handshake capture (example)
-            result = self.pineapple_ssh.handshake_capture_start("00:11:22:33:44:55", 6)
-            
-            self.log_message(f"Captura iniciada: {result}")
-            self.show_toast("Captura iniciada correctamente", "success")
-                
-        except Exception as e:
-            self.log_message(f"Error de captura: {str(e)}")
-            self.show_toast(f"Error de captura: {str(e)}", "error")
-    
-    def import_pcap(self):
-        """Import PCAP file"""
-        filename = filedialog.askopenfilename(
-            title="Importar archivo PCAP",
-            filetypes=[("PCAP files", "*.pcap"), ("All files", "*.*")]
+        """Start handshake capture (legacy method for compatibility)"""
+        if not self.connection_manager.is_connected():
+            if self.main_window:
+                self.main_window.show_toast("Error: No hay conexión con Pineapple", "error")
+            return
+        
+        # This would integrate with the attack manager for handshake capture
+        from src.core.attack_manager import AttackType, AttackTarget
+        
+        # For now, create a dummy target - in real implementation this would come from UI
+        target = AttackTarget(
+            bssid="00:00:00:00:00:00",
+            ssid="Target Network",
+            channel=6,
+            encryption="WPA2",
+            signal_strength=-50
         )
         
-        if filename:
-            try:
-                self.log_message(f"Importando PCAP: {filename}")
-                # Process PCAP file here
-                self.show_toast("Archivo PCAP importado correctamente", "success")
-            except Exception as e:
-                self.log_message(f"Error al importar PCAP: {str(e)}")
-                self.show_toast(f"Error al importar: {str(e)}", "error")
+        self.start_attack(AttackType.HANDSHAKE_CAPTURE, target)
     
-    def show_toast(self, message: str, toast_type: str = "info"):
-        """Show toast notification"""
-        # This would be implemented as a toast component in the UI
-        print(f"Toast ({toast_type}): {message}")
+    def import_pcap(self, file_path: str):
+        """Import PCAP file for analysis"""
+        try:
+            # This would integrate with capture manager
+            self.logger.log_user_action(f"Imported PCAP file: {file_path}")
+            if self.main_window:
+                self.main_window.show_toast("PCAP importado exitosamente", "success")
+        except Exception as e:
+            self.logger.error(f"Failed to import PCAP: {e}")
+            if self.main_window:
+                self.main_window.show_toast(f"Error importando PCAP: {e}", "error")
     
-    def log_message(self, message):
-        """Add message to log"""
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_entry = f"[{timestamp}] {message}"
-        
-        print(log_entry)  # Console output for now
-    
-    def load_config(self):
-        """Load saved configuration"""
-        # Configuration loading logic here
-        pass
-    
-    def save_config(self):
-        """Save current configuration"""
-        config = {
-            'ui_theme': 'dark',
-            'last_used': datetime.now().isoformat()
-        }
-        
-        # Save config logic here
-        pass
+
     
     def on_closing(self):
         """Handle application closing"""
-        self.save_config()
-        
-        # Stop any running captures
         try:
-            if self.pineapple_ssh.connected:
-                self.pineapple_ssh.handshake_capture_stop()
-        except:
-            pass
-        
-        # Close SSH connection
-        try:
-            self.pineapple_ssh.close()
-        except:
-            pass
-        
-        self.root.destroy()
+            # Save configuration
+            self.config_manager.save()
+            
+            # Stop any running operations
+            if self.connection_manager.is_connected():
+                self.disconnect_from_pineapple()
+            
+            # Stop active scans and attacks
+            for scan_id in list(self.scan_manager.active_scans.keys()):
+                self.scan_manager.cancel_scan(scan_id)
+            
+            for attack_id in list(self.attack_manager.active_attacks.keys()):
+                self.attack_manager.stop_attack(attack_id)
+            
+            self.logger.info("Application closing")
+            
+            if self.root:
+                self.root.destroy()
+                
+        except Exception as e:
+            self.logger.error(f"Error during application shutdown: {e}")
     
     def run(self):
         """Run the application"""
-        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
-        self.root.mainloop()
-
-def run():
-    """Main entry point"""
-    app = PineappleDesktopApp()
-    app.run()
+        try:
+            # Set appearance mode and color theme
+            ctk.set_appearance_mode("dark")
+            ctk.set_default_color_theme("blue")
+            
+            # Create main window
+            self.root = ctk.CTk()
+            self.root.title("Pineapple Desktop")
+            self.root.geometry("1400x900")
+            
+            # Create main window UI
+            self.main_window = ModernMainWindow(self.root, self)
+            
+            # Set closing protocol
+            self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+            
+            # Load saved configuration
+            window_geometry = self.config_manager.get("window_geometry", "1400x900")
+            self.root.geometry(window_geometry)
+            
+            self.logger.info("Application started successfully")
+            
+            # Start main loop
+            self.root.mainloop()
+            
+        except Exception as e:
+            self.logger.error(f"Failed to start application: {e}")
+            raise
 
 if __name__ == "__main__":
-    run()
+    app = PineappleDesktopApp()
+    app.run()

@@ -1,0 +1,33 @@
+2025-09-24 20:18:46 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-09-24 20:18:46 - pineapple_desktop - ERROR - Failed to start application: 'ConfigManager' object has no attribute 'get_all'
+2025-09-24 20:19:16 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-09-24 20:19:16 - pineapple_desktop - INFO - Application started successfully
+2025-09-24 20:19:54 - pineapple_desktop - INFO - Application closing
+2025-09-24 20:19:54 - pineapple_desktop - ERROR - Error during application shutdown: 'PineappleButton' object has no attribute '_font'
+2025-09-24 20:19:56 - pineapple_desktop - INFO - Application closing
+2025-09-24 20:19:56 - pineapple_desktop - ERROR - Error during application shutdown: 'PineappleButton' object has no attribute '_font'
+2025-09-24 20:20:02 - pineapple_desktop - INFO - Application closing
+2025-09-24 20:20:02 - pineapple_desktop - ERROR - Error during application shutdown: 'PineappleButton' object has no attribute '_font'
+2025-09-24 20:20:02 - pineapple_desktop - INFO - Application closing
+2025-09-24 20:20:02 - pineapple_desktop - ERROR - Error during application shutdown: 'PineappleButton' object has no attribute '_font'
+2025-09-24 20:20:04 - pineapple_desktop - INFO - Application closing
+2025-09-24 20:20:04 - pineapple_desktop - ERROR - Error during application shutdown: 'PineappleButton' object has no attribute '_font'
+2025-09-24 20:20:04 - pineapple_desktop - INFO - Application closing
+2025-09-24 20:20:04 - pineapple_desktop - ERROR - Error during application shutdown: 'PineappleButton' object has no attribute '_font'
+2025-09-24 20:20:16 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-09-24 20:20:16 - pineapple_desktop - INFO - Application started successfully
+2025-09-24 20:20:31 - pineapple_desktop - INFO - Application closing
+2025-09-24 20:20:31 - pineapple_desktop - ERROR - Error during application shutdown: 'PineappleButton' object has no attribute '_font'
+2025-09-24 20:23:34 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-09-24 20:23:35 - pineapple_desktop - INFO - Application started successfully
+2025-09-24 20:25:51 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-09-24 20:25:51 - pineapple_desktop - INFO - Application started successfully
+2025-09-24 20:27:44 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-09-24 20:27:44 - pineapple_desktop - INFO - Application started successfully
+2025-09-24 20:29:59 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-09-24 20:30:00 - pineapple_desktop - INFO - Application started successfully
+2025-09-24 20:30:16 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-09-24 20:30:17 - pineapple_desktop - INFO - Application started successfully
+2025-09-24 20:33:16 - pineapple_desktop - INFO - Application closing
+2025-09-24 20:34:49 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-09-24 20:34:49 - pineapple_desktop - INFO - Application started successfully

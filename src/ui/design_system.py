@@ -20,6 +20,7 @@ class Colors:
     WARNING = "#FFB020"  # Ámbar para advertencias
     SUCCESS = "#00B39F"  # Verde para éxito
     INFO = "#0F62FE"  # Azul para información
+    ERROR = "#FF6B6B"  # Rojo para errores (alias for DANGER)
     
     # Text colors
     TEXT_PRIMARY = "#E6EEF8"  # Texto principal
@@ -47,6 +48,7 @@ class Typography:
     SIZE_XS = 12
     SIZE_SM = 14
     SIZE_BASE = 16
+    SIZE_MD = 16  # Alias for SIZE_BASE
     SIZE_LG = 18
     SIZE_XL = 20
     SIZE_2XL = 24

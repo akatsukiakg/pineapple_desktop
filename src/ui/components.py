@@ -18,10 +18,15 @@ class PineappleButton(ctk.CTkButton):
             "danger": ComponentStyles.BUTTON_DANGER
         }
         
-        button_style = styles.get(style, ComponentStyles.BUTTON_PRIMARY)
+        button_style = styles.get(style, ComponentStyles.BUTTON_PRIMARY).copy()
         button_style.update(kwargs)
         
+        # Initialize the parent class properly
         super().__init__(parent, text=text, **button_style)
+        
+        # Ensure _font attribute is properly initialized
+        if not hasattr(self, '_font'):
+            self._font = None
 
 class StatusBadge(ctk.CTkLabel):
     """Status badge component"""
@@ -185,16 +190,18 @@ class ConfirmationModal(ctk.CTkToplevel):
     """Confirmation modal for dangerous actions"""
     
     def __init__(self, parent, title: str, message: str, 
-                 on_confirm: Callable = None, on_cancel: Callable = None):
+                 on_confirm: Callable = None, on_cancel: Callable = None,
+                 require_consent: bool = True, consent_text: str = "Entiendo los riesgos y acepto continuar"):
         super().__init__(parent)
         
         self.on_confirm = on_confirm
         self.on_cancel = on_cancel
         self.result = None
+        self.require_consent = require_consent
         
         # Window configuration
         self.title(title)
-        self.geometry("500x300")
+        self.geometry("550x400")
         self.resizable(False, False)
         self.configure(fg_color=Colors.BG_DARK)
         
@@ -206,14 +213,24 @@ class ConfirmationModal(ctk.CTkToplevel):
         content_frame = ctk.CTkFrame(self, fg_color=Colors.BG_CARD, corner_radius=BorderRadius.LG)
         content_frame.pack(fill="both", expand=True, padx=20, pady=20)
         
-        # Title
-        title_label = ctk.CTkLabel(
-            content_frame,
-            text=title,
-            font=(Typography.FONT_FAMILY, Typography.SIZE_XL, Typography.WEIGHT_SEMIBOLD),
-            text_color=Colors.TEXT_PRIMARY
+        # Warning icon and title
+        header_frame = ctk.CTkFrame(content_frame, fg_color="transparent")
+        header_frame.pack(fill="x", pady=(20, 10))
+        
+        warning_label = ctk.CTkLabel(
+            header_frame,
+            text="⚠️",
+            font=(Typography.FONT_FAMILY, Typography.SIZE_3XL),
         )
-        title_label.pack(pady=(20, 10))
+        warning_label.pack(side="left", padx=(0, 10))
+        
+        title_label = ctk.CTkLabel(
+            header_frame,
+            text=title,
+            font=(Typography.FONT_FAMILY, Typography.SIZE_XL, Typography.WEIGHT_BOLD),
+            text_color=Colors.DANGER
+        )
+        title_label.pack(side="left")
         
         # Message
         message_label = ctk.CTkLabel(
@@ -221,20 +238,37 @@ class ConfirmationModal(ctk.CTkToplevel):
             text=message,
             font=(Typography.FONT_FAMILY, Typography.SIZE_BASE),
             text_color=Colors.TEXT_SECONDARY,
+            wraplength=450,
+            justify="left"
+        )
+        message_label.pack(pady=10, padx=20)
+        
+        # Security notice
+        security_frame = ctk.CTkFrame(content_frame, fg_color=Colors.BG_HOVER, corner_radius=BorderRadius.MD)
+        security_frame.pack(fill="x", padx=20, pady=10)
+        
+        security_label = ctk.CTkLabel(
+            security_frame,
+            text="🔒 Esta acción requiere autorización explícita y será registrada en el log de auditoría.",
+            font=(Typography.FONT_FAMILY, Typography.SIZE_SM),
+            text_color=Colors.WARNING,
             wraplength=400
         )
-        message_label.pack(pady=10)
+        security_label.pack(pady=10, padx=15)
         
-        # Consent checkbox
-        self.consent_var = ctk.BooleanVar()
-        consent_checkbox = ctk.CTkCheckBox(
-            content_frame,
-            text="Confirmo que tengo autorización",
-            variable=self.consent_var,
-            font=(Typography.FONT_FAMILY, Typography.SIZE_SM),
-            text_color=Colors.TEXT_PRIMARY
-        )
-        consent_checkbox.pack(pady=20)
+        # Consent checkbox (if required)
+        if self.require_consent:
+            self.consent_var = ctk.BooleanVar()
+            consent_checkbox = ctk.CTkCheckBox(
+                content_frame,
+                text=consent_text,
+                variable=self.consent_var,
+                font=(Typography.FONT_FAMILY, Typography.SIZE_SM),
+                text_color=Colors.TEXT_PRIMARY
+            )
+            consent_checkbox.pack(pady=20)
+        else:
+            self.consent_var = ctk.BooleanVar(value=True)  # Auto-approve if consent not required
         
         # Buttons
         button_frame = ctk.CTkFrame(content_frame, fg_color="transparent")
@@ -262,6 +296,15 @@ class ConfirmationModal(ctk.CTkToplevel):
             if self.on_confirm:
                 self.on_confirm()
             self.destroy()
+        else:
+            # Show error if consent required but not given
+            error_label = ctk.CTkLabel(
+                self,
+                text="⚠️ Debe confirmar que entiende los riesgos",
+                text_color=Colors.DANGER,
+                font=(Typography.FONT_FAMILY, Typography.SIZE_SM)
+            )
+            error_label.pack(pady=5)
     
     def _on_cancel(self):
         self.result = False
