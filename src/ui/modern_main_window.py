@@ -455,6 +455,9 @@ class ModernMainWindow:
         
         # Real activities from system events
         self._load_recent_activities()
+        
+        # Show tool availability warnings
+        self._show_tool_warnings()
     
     def _load_recent_activities(self):
         """Load recent activities from system events"""
@@ -490,6 +493,33 @@ class ModernMainWindow:
                 text_color=Colors.TEXT_SECONDARY
             )
             no_activity_label.pack(pady=20)
+    
+    def _show_tool_warnings(self):
+        """Show warnings for missing tools"""
+        warnings = []
+        
+        # Check nmap availability
+        if hasattr(self.app, 'scan_manager') and not self.app.scan_manager.is_nmap_available():
+            warnings.append("⚠️ Nmap no está instalado - usando métodos de escaneo alternativos")
+        
+        # Check tshark availability  
+        if hasattr(self.app, 'capture_manager') and hasattr(self.app.capture_manager, 'is_tshark_available') and not self.app.capture_manager.is_tshark_available():
+            warnings.append("⚠️ Wireshark/tshark no está instalado - funcionalidad de captura limitada")
+        
+        # Check aircrack availability
+        if hasattr(self.app, 'capture_manager') and hasattr(self.app.capture_manager, 'is_aircrack_available') and not self.app.capture_manager.is_aircrack_available():
+            warnings.append("⚠️ Aircrack-ng no está instalado - usando métodos alternativos")
+        
+        if warnings:
+            for warning in warnings:
+                warning_item = ActivityItem(
+                    self.activity_scroll,
+                    action=warning,
+                    timestamp=time.strftime("%H:%M"),
+                    status="warning"
+                )
+                warning_item.pack(fill="x", pady=2)
+    
     
     def _start_real_time_updates(self):
         """Start real-time data updates with real network monitoring"""

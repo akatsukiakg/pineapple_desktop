@@ -31,10 +31,10 @@ class ScanResult:
     ip: str
     hostname: str
     status: str
-    ports: List[Dict[str, Any]]
-    services: List[Dict[str, Any]]
-    os_info: Dict[str, Any]
-    vulnerabilities: List[Dict[str, Any]]
+    ports: List[Dict]
+    services: List[Dict]
+    os_info: Dict
+    vulnerabilities: List[Dict]
     scan_time: float
 
 @dataclass
@@ -42,13 +42,13 @@ class ScanJob:
     scan_id: str
     scan_type: ScanType
     target: str
-    options: Dict[str, Any]
     status: ScanStatus
     progress: float
     start_time: float
     end_time: Optional[float]
     results: List[ScanResult]
-    error_message: Optional[str]
+    options: Dict[str, Any]
+    error_message: Optional[str] = None
 
 class ScanManager:
     """Manages network scanning operations using Nmap"""
@@ -140,146 +140,103 @@ class ScanManager:
         """Perform ping sweep to discover live hosts"""
         target = scan_job.target
         
-        # Build nmap command for ping sweep
-        cmd = ["nmap", "-sn", "-T4", target]
-        
         if self.logger:
-            self.logger.debug(f"Running ping sweep: {' '.join(cmd)}")
+            self.logger.debug(f"Running alternative ping sweep on: {target}")
         
         scan_job.progress = 10.0
         self._notify_callbacks(scan_job)
         
-        # Execute nmap
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        # Use alternative ping sweep method
+        hosts = self._alternative_ping_sweep(target)
         
         scan_job.progress = 80.0
         self._notify_callbacks(scan_job)
         
-        if result.returncode == 0:
-            # Parse results
-            hosts = self._parse_ping_sweep_output(result.stdout)
-            
-            for host_ip in hosts:
-                scan_result = ScanResult(
-                    ip=host_ip,
-                    hostname=self._resolve_hostname(host_ip),
-                    status="up",
-                    ports=[],
-                    services=[],
-                    os_info={},
-                    vulnerabilities=[],
-                    scan_time=time.time()
-                )
-                scan_job.results.append(scan_result)
-        else:
-            raise Exception(f"Nmap ping sweep failed: {result.stderr}")
+        for host_ip in hosts:
+            scan_result = ScanResult(
+                ip=host_ip,
+                hostname=self._resolve_hostname(host_ip),
+                status="up",
+                ports=[],
+                services=[],
+                os_info={},
+                vulnerabilities=[],
+                scan_time=time.time()
+            )
+            scan_job.results.append(scan_result)
     
     def _port_scan(self, scan_job: ScanJob):
         """Perform port scan on target"""
         target = scan_job.target
         ports = scan_job.options.get("ports", "1-1000")
         
-        # Build nmap command for port scan
-        cmd = ["nmap", "-sS", "-T4", "-p", ports, target]
-        
         if self.logger:
-            self.logger.debug(f"Running port scan: {' '.join(cmd)}")
+            self.logger.debug(f"Running alternative port scan on: {target}, ports: {ports}")
         
         scan_job.progress = 10.0
         self._notify_callbacks(scan_job)
         
-        # Execute nmap with XML output
-        result = subprocess.run(cmd + ["-oX", "-"], capture_output=True, text=True, timeout=600)
+        # Use alternative port scan method
+        scan_results = self._alternative_port_scan(target, ports)
         
         scan_job.progress = 80.0
         self._notify_callbacks(scan_job)
         
-        if result.returncode == 0:
-            # Parse XML results
-            scan_results = self._parse_nmap_xml(result.stdout)
-            scan_job.results.extend(scan_results)
-        else:
-            raise Exception(f"Nmap port scan failed: {result.stderr}")
+        scan_job.results.extend(scan_results)
     
     def _service_scan(self, scan_job: ScanJob):
         """Perform service detection scan"""
         target = scan_job.target
-        ports = scan_job.options.get("ports", "1-1000")
-        
-        # Build nmap command for service detection
-        cmd = ["nmap", "-sV", "-T4", "-p", ports, target]
         
         if self.logger:
-            self.logger.debug(f"Running service scan: {' '.join(cmd)}")
+            self.logger.debug(f"Running alternative service scan on: {target}")
         
         scan_job.progress = 10.0
         self._notify_callbacks(scan_job)
         
-        # Execute nmap with XML output
-        result = subprocess.run(cmd + ["-oX", "-"], capture_output=True, text=True, timeout=900)
+        # Use alternative service detection method
+        scan_results = self._alternative_service_scan(target)
         
         scan_job.progress = 80.0
         self._notify_callbacks(scan_job)
         
-        if result.returncode == 0:
-            # Parse XML results
-            scan_results = self._parse_nmap_xml(result.stdout)
-            scan_job.results.extend(scan_results)
-        else:
-            raise Exception(f"Nmap service scan failed: {result.stderr}")
+        scan_job.results.extend(scan_results)
     
     def _vulnerability_scan(self, scan_job: ScanJob):
-        """Perform vulnerability scan using NSE scripts"""
+        """Perform vulnerability scan"""
         target = scan_job.target
         
-        # Build nmap command for vulnerability scanning
-        cmd = ["nmap", "--script", "vuln", "-T4", target]
-        
         if self.logger:
-            self.logger.debug(f"Running vulnerability scan: {' '.join(cmd)}")
+            self.logger.debug(f"Running alternative vulnerability scan on: {target}")
         
         scan_job.progress = 10.0
         self._notify_callbacks(scan_job)
         
-        # Execute nmap with XML output
-        result = subprocess.run(cmd + ["-oX", "-"], capture_output=True, text=True, timeout=1200)
+        # Use alternative vulnerability detection method
+        scan_results = self._alternative_vulnerability_scan(target)
         
         scan_job.progress = 80.0
         self._notify_callbacks(scan_job)
         
-        if result.returncode == 0:
-            # Parse XML results
-            scan_results = self._parse_nmap_xml(result.stdout)
-            scan_job.results.extend(scan_results)
-        else:
-            raise Exception(f"Nmap vulnerability scan failed: {result.stderr}")
+        scan_job.results.extend(scan_results)
     
     def _stealth_scan(self, scan_job: ScanJob):
-        """Perform stealth SYN scan"""
+        """Perform stealth scan"""
         target = scan_job.target
-        ports = scan_job.options.get("ports", "1-1000")
-        
-        # Build nmap command for stealth scan
-        cmd = ["nmap", "-sS", "-T2", "-f", "-p", ports, target]
         
         if self.logger:
-            self.logger.debug(f"Running stealth scan: {' '.join(cmd)}")
+            self.logger.debug(f"Running alternative stealth scan on: {target}")
         
         scan_job.progress = 10.0
         self._notify_callbacks(scan_job)
         
-        # Execute nmap with XML output
-        result = subprocess.run(cmd + ["-oX", "-"], capture_output=True, text=True, timeout=1800)
+        # Use alternative stealth scan method
+        scan_results = self._alternative_stealth_scan(target)
         
         scan_job.progress = 80.0
         self._notify_callbacks(scan_job)
         
-        if result.returncode == 0:
-            # Parse XML results
-            scan_results = self._parse_nmap_xml(result.stdout)
-            scan_job.results.extend(scan_results)
-        else:
-            raise Exception(f"Nmap stealth scan failed: {result.stderr}")
+        scan_job.results.extend(scan_results)
     
     def _parse_ping_sweep_output(self, output: str) -> List[str]:
         """Parse ping sweep output to extract live hosts"""
@@ -468,3 +425,346 @@ class ScanManager:
             return json.dumps(asdict(scan_job), indent=2, default=str)
         
         return None
+    
+    def is_nmap_available(self) -> bool:
+        """Check if nmap is available on the system"""
+        try:
+            result = subprocess.run(["nmap", "--version"], 
+                                  capture_output=True, text=True, timeout=5)
+            return result.returncode == 0
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            return False
+    
+    # Alternative scanning methods that don't require nmap
+    
+    def _alternative_ping_sweep(self, target: str) -> List[str]:
+        """Alternative ping sweep using native ping and socket methods"""
+        import ipaddress
+        import socket
+        import threading
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        
+        hosts = []
+        
+        try:
+            # Parse target to get IP range
+            if '/' in target:
+                # CIDR notation
+                try:
+                    network = ipaddress.ip_network(target, strict=False)
+                    ip_list = [str(ip) for ip in network.hosts()]
+                except ValueError:
+                    if self.logger:
+                        self.logger.error(f"Invalid network range: {target}")
+                    return hosts
+            elif '-' in target:
+                # Range notation (e.g., 192.168.1.1-254)
+                start_ip, end_range = target.split('-')
+                base_ip = '.'.join(start_ip.split('.')[:-1])
+                start_num = int(start_ip.split('.')[-1])
+                end_num = int(end_range)
+                ip_list = [f"{base_ip}.{i}" for i in range(start_num, end_num + 1)]
+            else:
+                # Single IP
+                ip_list = [target]
+            
+            # Limit to reasonable number of IPs
+            if len(ip_list) > 254:
+                ip_list = ip_list[:254]
+            
+            if self.logger:
+                self.logger.info(f"Scanning {len(ip_list)} hosts in {target}")
+            
+            def ping_host(ip):
+                try:
+                    # Try TCP connect to common ports as ping alternative
+                    for port in [80, 443, 22, 21, 23, 25, 53, 135, 139, 445]:
+                        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        sock.settimeout(1)
+                        result = sock.connect_ex((ip, port))
+                        sock.close()
+                        if result == 0:
+                            return ip
+                    return None
+                except:
+                    return None
+            
+            # Use thread pool for concurrent pings
+            with ThreadPoolExecutor(max_workers=50) as executor:
+                future_to_ip = {executor.submit(ping_host, ip): ip for ip in ip_list}
+                for future in as_completed(future_to_ip, timeout=30):
+                    try:
+                        result = future.result(timeout=1)
+                        if result:
+                            hosts.append(result)
+                    except Exception:
+                        continue
+            
+            if self.logger:
+                self.logger.info(f"Found {len(hosts)} active hosts")
+        
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Alternative ping sweep failed: {e}")
+        
+        return hosts
+    
+    def _alternative_port_scan(self, target: str, ports: str) -> List[ScanResult]:
+        """Alternative port scan using socket connections"""
+        import socket
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        
+        results = []
+        
+        try:
+            # Parse port range
+            if '-' in ports:
+                start_port, end_port = map(int, ports.split('-'))
+                port_list = list(range(start_port, min(end_port + 1, 65536)))
+            elif ',' in ports:
+                port_list = [int(p.strip()) for p in ports.split(',')]
+            else:
+                port_list = [int(ports)]
+            
+            # Limit to reasonable number of ports
+            if len(port_list) > 1000:
+                port_list = port_list[:1000]
+            
+            def scan_port(ip, port):
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.settimeout(2)
+                    result = sock.connect_ex((ip, port))
+                    sock.close()
+                    
+                    if result == 0:
+                        return {
+                            'port': port,
+                            'protocol': 'tcp',
+                            'state': 'open'
+                        }
+                except:
+                    pass
+                return None
+            
+            open_ports = []
+            
+            # Use thread pool for concurrent port scanning
+            with ThreadPoolExecutor(max_workers=100) as executor:
+                future_to_port = {executor.submit(scan_port, target, port): port for port in port_list}
+                for future in as_completed(future_to_port):
+                    result = future.result()
+                    if result:
+                        open_ports.append(result)
+            
+            if open_ports:
+                scan_result = ScanResult(
+                    ip=target,
+                    hostname=self._resolve_hostname(target),
+                    status="up",
+                    ports=open_ports,
+                    services=[],
+                    os_info={},
+                    vulnerabilities=[],
+                    scan_time=time.time()
+                )
+                results.append(scan_result)
+        
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Alternative port scan failed: {e}")
+        
+        return results
+    
+    def _identify_service(self, port: int) -> str:
+        """Identify service running on port"""
+        common_services = {
+            21: 'ftp', 22: 'ssh', 23: 'telnet', 25: 'smtp', 53: 'dns',
+            80: 'http', 110: 'pop3', 135: 'msrpc', 139: 'netbios-ssn',
+            143: 'imap', 443: 'https', 445: 'microsoft-ds', 993: 'imaps',
+            995: 'pop3s', 1433: 'mssql', 3306: 'mysql', 3389: 'rdp',
+            5432: 'postgresql', 5900: 'vnc', 8080: 'http-proxy'
+        }
+        return common_services.get(port, 'unknown')
+    
+    def _alternative_service_scan(self, target: str) -> List[ScanResult]:
+        """Alternative service detection using banner grabbing"""
+        import socket
+        
+        results = []
+        
+        try:
+            # Common ports and their typical services
+            common_ports = {
+                21: 'ftp', 22: 'ssh', 23: 'telnet', 25: 'smtp',
+                53: 'dns', 80: 'http', 110: 'pop3', 135: 'rpc',
+                139: 'netbios', 143: 'imap', 443: 'https', 445: 'smb',
+                993: 'imaps', 995: 'pop3s'
+            }
+            
+            services = []
+            open_ports = []
+            
+            for port, service_name in common_ports.items():
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.settimeout(3)
+                    result = sock.connect_ex((target, port))
+                    
+                    if result == 0:
+                        open_ports.append({
+                            'port': port,
+                            'protocol': 'tcp',
+                            'state': 'open'
+                        })
+                        
+                        # Try to grab banner
+                        banner = ""
+                        try:
+                            sock.send(b"GET / HTTP/1.0\r\n\r\n")
+                            banner = sock.recv(1024).decode('utf-8', errors='ignore')
+                        except:
+                            pass
+                        
+                        services.append({
+                            'port': port,
+                            'name': service_name,
+                            'product': '',
+                            'version': '',
+                            'extrainfo': banner[:100] if banner else ''
+                        })
+                    
+                    sock.close()
+                except:
+                    pass
+            
+            if open_ports:
+                scan_result = ScanResult(
+                    ip=target,
+                    hostname=self._resolve_hostname(target),
+                    status="up",
+                    ports=open_ports,
+                    services=services,
+                    os_info={},
+                    vulnerabilities=[],
+                    scan_time=time.time()
+                )
+                results.append(scan_result)
+        
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Alternative service scan failed: {e}")
+        
+        return results
+    
+    def _alternative_vulnerability_scan(self, target: str) -> List[ScanResult]:
+        """Alternative vulnerability detection using basic checks"""
+        results = []
+        
+        try:
+            vulnerabilities = []
+            
+            # Basic vulnerability checks
+            # Check for common vulnerable services
+            vulnerable_services = {
+                21: "FTP service detected - check for anonymous access",
+                23: "Telnet service detected - unencrypted protocol",
+                135: "RPC service detected - potential security risk",
+                445: "SMB service detected - check for vulnerabilities"
+            }
+            
+            open_ports = []
+            
+            for port, vuln_desc in vulnerable_services.items():
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.settimeout(2)
+                    result = sock.connect_ex((target, port))
+                    sock.close()
+                    
+                    if result == 0:
+                        open_ports.append({
+                            'port': port,
+                            'protocol': 'tcp',
+                            'state': 'open'
+                        })
+                        
+                        vulnerabilities.append({
+                            'script': f'basic-vuln-check-{port}',
+                            'output': vuln_desc,
+                            'severity': 'medium'
+                        })
+                except:
+                    pass
+            
+            if vulnerabilities:
+                scan_result = ScanResult(
+                    ip=target,
+                    hostname=self._resolve_hostname(target),
+                    status="up",
+                    ports=open_ports,
+                    services=[],
+                    os_info={},
+                    vulnerabilities=vulnerabilities,
+                    scan_time=time.time()
+                )
+                results.append(scan_result)
+        
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Alternative vulnerability scan failed: {e}")
+        
+        return results
+    
+    def _alternative_stealth_scan(self, target: str) -> List[ScanResult]:
+        """Alternative stealth scan using slower, less detectable methods"""
+        import socket
+        import time
+        import random
+        
+        results = []
+        
+        try:
+            # Use random delays and limited concurrent connections for stealth
+            common_ports = [21, 22, 23, 25, 53, 80, 110, 135, 139, 143, 443, 445, 993, 995]
+            random.shuffle(common_ports)
+            
+            open_ports = []
+            
+            for port in common_ports:
+                try:
+                    # Random delay between scans for stealth
+                    time.sleep(random.uniform(0.5, 2.0))
+                    
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.settimeout(5)
+                    result = sock.connect_ex((target, port))
+                    sock.close()
+                    
+                    if result == 0:
+                        open_ports.append({
+                            'port': port,
+                            'protocol': 'tcp',
+                            'state': 'open'
+                        })
+                except:
+                    pass
+            
+            if open_ports:
+                scan_result = ScanResult(
+                    ip=target,
+                    hostname=self._resolve_hostname(target),
+                    status="up",
+                    ports=open_ports,
+                    services=[],
+                    os_info={},
+                    vulnerabilities=[],
+                    scan_time=time.time()
+                )
+                results.append(scan_result)
+        
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Alternative stealth scan failed: {e}")
+        
+        return results

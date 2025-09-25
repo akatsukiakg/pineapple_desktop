@@ -11,6 +11,7 @@ import time
 from core.config import ConfigManager
 from core.logger import Logger
 from core.capture import CaptureManager
+from core.packet_capture import PacketCaptureManager
 from core.pineapple import PineappleSSH
 from core.connection_manager import ConnectionManager, ConnectionStatus
 from core.scan_manager import ScanManager
@@ -25,7 +26,8 @@ class PineappleDesktopApp:
         # Initialize core managers
         self.config_manager = ConfigManager()
         self.logger = Logger()
-        self.capture_manager = CaptureManager(Path("captures"))
+        self.capture_manager = CaptureManager(self.logger)
+        self.packet_capture_manager = PacketCaptureManager(self.logger)
         
         # Initialize connection and operation managers
         self.connection_manager = ConnectionManager(self.logger)

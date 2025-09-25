@@ -1,0 +1,39 @@
+2025-09-24 21:04:36 - pineapple_desktop - WARNING - tshark not available, limited capture functionality
+2025-09-24 21:04:36 - pineapple_desktop - WARNING - aircrack-ng suite not available, using alternative methods
+2025-09-24 21:04:36 - pineapple_desktop - WARNING - tshark not available, using fallback capture methods
+2025-09-24 21:04:36 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-09-24 21:04:36 - pineapple_desktop - INFO - Application started successfully
+2025-09-24 21:05:53 - pineapple_desktop - WARNING - tshark not available, limited capture functionality
+2025-09-24 21:05:53 - pineapple_desktop - WARNING - aircrack-ng suite not available, using alternative methods
+2025-09-24 21:05:53 - pineapple_desktop - WARNING - tshark not available, using fallback capture methods
+2025-09-24 21:05:53 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-09-24 21:05:54 - pineapple_desktop - INFO - Application started successfully
+2025-09-24 21:06:46 - pineapple_desktop - INFO - Application closing
+2025-09-24 21:17:06 - pineapple_desktop - WARNING - tshark not available, limited capture functionality
+2025-09-24 21:17:06 - pineapple_desktop - WARNING - aircrack-ng suite not available, using alternative methods
+2025-09-24 21:17:06 - pineapple_desktop - WARNING - tshark not available, using fallback capture methods
+2025-09-24 21:17:06 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-09-24 21:17:06 - pineapple_desktop - INFO - Application started successfully
+2025-09-24 21:17:55 - pineapple_desktop - INFO - Application closing
+2025-09-24 21:18:49 - pineapple_desktop - INFO - Started ping_sweep scan on 127.0.0.1 (ID: scan_1_1758759529)
+2025-09-24 21:18:49 - pineapple_desktop - INFO - Scanning 1 hosts in 127.0.0.1
+2025-09-24 21:18:51 - pineapple_desktop - INFO - Started port_scan scan on 127.0.0.1 (ID: scan_2_1758759531)
+2025-09-24 21:18:54 - pineapple_desktop - ERROR - Attack attack_1_1758759534 failed: 'dict' object has no attribute 'ssid'
+2025-09-24 21:18:54 - pineapple_desktop - WARNING - tshark not available, using fallback capture methods
+2025-09-24 21:18:56 - pineapple_desktop - INFO - Found 1 active hosts
+2025-09-24 21:19:30 - pineapple_desktop - INFO - Started ping_sweep scan on 127.0.0.1 (ID: scan_1_1758759570)
+2025-09-24 21:19:30 - pineapple_desktop - INFO - Scanning 1 hosts in 127.0.0.1
+2025-09-24 21:19:32 - pineapple_desktop - INFO - Started port_scan scan on 127.0.0.1 (ID: scan_2_1758759572)
+2025-09-24 21:19:35 - pineapple_desktop - WARNING - tshark not available, using fallback capture methods
+2025-09-24 21:19:35 - pineapple_desktop - INFO - Starting scapy capture on interface \Device\NPF_{9D5FADBE-C15C-43FA-A9E0-8781EE893614} with filter 'None'
+2025-09-24 21:19:35 - pineapple_desktop - ERROR - Capture capture_0 failed: Scapy capture failed: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket or conf.L3socket6 to access layer 3
+2025-09-24 21:19:38 - pineapple_desktop - INFO - Found 1 active hosts
+2025-09-24 21:19:59 - pineapple_desktop - INFO - Started ping_sweep scan on 127.0.0.1 (ID: scan_1_1758759599)
+2025-09-24 21:19:59 - pineapple_desktop - INFO - Scanning 1 hosts in 127.0.0.1
+2025-09-24 21:20:01 - pineapple_desktop - INFO - Started port_scan scan on 127.0.0.1 (ID: scan_2_1758759601)
+2025-09-24 21:20:04 - pineapple_desktop - WARNING - No wireless interface found for deauth attack
+2025-09-24 21:20:04 - pineapple_desktop - INFO - Started deauth attack on TestNetwork (ID: attack_1_1758759604)
+2025-09-24 21:20:05 - pineapple_desktop - WARNING - tshark not available, using fallback capture methods
+2025-09-24 21:20:05 - pineapple_desktop - INFO - Starting scapy capture on interface \Device\NPF_{9D5FADBE-C15C-43FA-A9E0-8781EE893614} with filter 'None'
+2025-09-24 21:20:05 - pineapple_desktop - ERROR - Capture capture_0 failed: Scapy capture failed: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket or conf.L3socket6 to access layer 3
+2025-09-24 21:20:06 - pineapple_desktop - INFO - Found 1 active hosts
