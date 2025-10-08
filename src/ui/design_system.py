@@ -141,6 +141,7 @@ class Icons:
     DASHBOARD = "📊"
     DEVICES = "📱"
     SCAN = "🔍"
+    WIFI = "📶"
     CAPTURE = "📹"
     MAP = "🗺️"
     LOGS = "📋"

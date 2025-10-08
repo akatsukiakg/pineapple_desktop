@@ -40,3 +40,79 @@
 2025-09-24 20:53:33 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
 2025-09-24 20:53:33 - pineapple_desktop - INFO - Application started successfully
 2025-09-24 20:55:17 - pineapple_desktop - INFO - Application closing
+2025-10-08 09:10:33 - pineapple_desktop - WARNING - tshark not available, limited capture functionality
+2025-10-08 09:10:33 - pineapple_desktop - WARNING - aircrack-ng suite not available, using alternative methods
+2025-10-08 09:10:33 - pineapple_desktop - WARNING - tshark not available, using fallback capture methods
+2025-10-08 09:10:33 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-10-08 09:10:36 - pineapple_desktop - INFO - Application started successfully
+2025-10-08 09:11:05 - pineapple_desktop - INFO - Connection status changed: connecting - Conectando a 192.168.1.1...
+2025-10-08 09:11:05 - pineapple_desktop - INFO - Connection status changed: error - Error conectando a Pineapple: 'PineappleSSH' object has no attribute 'run_command'
+2025-10-08 09:11:06 - pineapple_desktop - ERROR - Error conectando a Pineapple: 'PineappleSSH' object has no attribute 'run_command'
+2025-10-08 09:11:17 - pineapple_desktop - INFO - Connection status changed: connecting - Conectando a 192.168.1.1...
+2025-10-08 09:11:17 - pineapple_desktop - INFO - Connection status changed: error - Error conectando a Pineapple: 'PineappleSSH' object has no attribute 'run_command'
+2025-10-08 09:11:17 - pineapple_desktop - ERROR - Error conectando a Pineapple: 'PineappleSSH' object has no attribute 'run_command'
+2025-10-08 09:13:02 - pineapple_desktop - WARNING - tshark not available, limited capture functionality
+2025-10-08 09:13:02 - pineapple_desktop - WARNING - aircrack-ng suite not available, using alternative methods
+2025-10-08 09:13:02 - pineapple_desktop - WARNING - tshark not available, using fallback capture methods
+2025-10-08 09:13:02 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-10-08 09:13:04 - pineapple_desktop - INFO - Application started successfully
+2025-10-08 09:13:19 - pineapple_desktop - INFO - Connection status changed: connecting - Conectando a 192.168.1.1...
+2025-10-08 09:13:20 - pineapple_desktop - INFO - Connection status changed: error - Error conectando a Pineapple: Not connected
+2025-10-08 09:13:20 - pineapple_desktop - ERROR - Error conectando a Pineapple: Not connected
+2025-10-08 09:13:20 - pineapple_desktop - INFO - ACTION: Failed to connect to Pineapple at 192.168.1.1
+2025-10-08 09:14:15 - pineapple_desktop - INFO - Connection status changed: connecting - Conectando a 192.168.1.1...
+2025-10-08 09:14:16 - pineapple_desktop - INFO - Connection status changed: error - Error conectando a Pineapple: Not connected
+2025-10-08 09:14:16 - pineapple_desktop - ERROR - Error conectando a Pineapple: Not connected
+2025-10-08 09:14:16 - pineapple_desktop - INFO - ACTION: Failed to connect to Pineapple at 192.168.1.1
+2025-10-08 09:14:48 - pineapple_desktop - INFO - Connection status changed: connecting - Conectando a 172.16.42.42...
+2025-10-08 09:14:48 - pineapple_desktop - INFO - Connection status changed: error - Error conectando a Pineapple: Not connected
+2025-10-08 09:14:48 - pineapple_desktop - ERROR - Error conectando a Pineapple: Not connected
+2025-10-08 09:14:48 - pineapple_desktop - INFO - ACTION: Failed to connect to Pineapple at 172.16.42.42
+2025-10-08 09:16:38 - pineapple_desktop - WARNING - tshark not available, limited capture functionality
+2025-10-08 09:16:38 - pineapple_desktop - WARNING - aircrack-ng suite not available, using alternative methods
+2025-10-08 09:16:38 - pineapple_desktop - WARNING - tshark not available, using fallback capture methods
+2025-10-08 09:16:38 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-10-08 09:16:39 - pineapple_desktop - INFO - Application started successfully
+2025-10-08 09:20:06 - pineapple_desktop - INFO - Connection status changed: connecting - Conectando a 172.16.42.1:1471...
+2025-10-08 09:20:06 - pineapple_desktop - INFO - Connection status changed: error - Error conectando a Pineapple: Failed to establish SSH connection to 172.16.42.1:1471
+2025-10-08 09:20:06 - pineapple_desktop - ERROR - Error conectando a Pineapple: Failed to establish SSH connection to 172.16.42.1:1471
+2025-10-08 09:20:06 - pineapple_desktop - INFO - ACTION: Failed to connect to Pineapple at 172.16.42.1:1471
+2025-10-08 09:21:17 - pineapple_desktop - INFO - Connection status changed: connecting - Conectando a 172.16.42.1:1471...
+2025-10-08 09:21:17 - pineapple_desktop - INFO - Connection status changed: error - Error conectando a Pineapple: Failed to establish SSH connection to 172.16.42.1:1471
+2025-10-08 09:21:17 - pineapple_desktop - ERROR - Error conectando a Pineapple: Failed to establish SSH connection to 172.16.42.1:1471
+2025-10-08 09:21:17 - pineapple_desktop - INFO - ACTION: Failed to connect to Pineapple at 172.16.42.1:1471
+2025-10-08 09:21:30 - pineapple_desktop - INFO - Connection status changed: connecting - Conectando a 172.16.42.1...
+2025-10-08 09:21:32 - pineapple_desktop - INFO - Connection status changed: error - Error conectando a Pineapple: Failed to establish SSH connection to 172.16.42.1
+2025-10-08 09:21:32 - pineapple_desktop - ERROR - Error conectando a Pineapple: Failed to establish SSH connection to 172.16.42.1
+2025-10-08 09:21:32 - pineapple_desktop - INFO - ACTION: Failed to connect to Pineapple at 172.16.42.1
+2025-10-08 09:21:45 - pineapple_desktop - INFO - Connection status changed: connecting - Conectando a 172.16.42.1...
+2025-10-08 09:21:47 - pineapple_desktop - INFO - Connection status changed: error - Error conectando a Pineapple: Failed to establish SSH connection to 172.16.42.1
+2025-10-08 09:21:47 - pineapple_desktop - ERROR - Error conectando a Pineapple: Failed to establish SSH connection to 172.16.42.1
+2025-10-08 09:21:47 - pineapple_desktop - INFO - ACTION: Failed to connect to Pineapple at 172.16.42.1
+2025-10-08 09:25:08 - pineapple_desktop - WARNING - tshark not available, limited capture functionality
+2025-10-08 09:25:08 - pineapple_desktop - WARNING - aircrack-ng suite not available, using alternative methods
+2025-10-08 09:25:08 - pineapple_desktop - WARNING - tshark not available, using fallback capture methods
+2025-10-08 09:25:08 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-10-08 09:25:10 - pineapple_desktop - INFO - Application started successfully
+2025-10-08 09:25:41 - pineapple_desktop - INFO - Connection status changed: connecting - Conectando a 172.16.42...
+2025-10-08 09:25:41 - pineapple_desktop - INFO - Connection status changed: error - Error conectando a Pineapple: Failed to establish SSH connection to 172.16.42:22
+2025-10-08 09:25:41 - pineapple_desktop - ERROR - Error conectando a Pineapple: Failed to establish SSH connection to 172.16.42:22
+2025-10-08 09:25:41 - pineapple_desktop - INFO - ACTION: Failed to connect to Pineapple at 172.16.42
+2025-10-08 09:25:48 - pineapple_desktop - INFO - Connection status changed: connecting - Conectando a 172.16.42.1...
+2025-10-08 09:25:50 - pineapple_desktop - INFO - Connection status changed: error - Error conectando a Pineapple: Failed to establish SSH connection to 172.16.42.1:22
+2025-10-08 09:25:50 - pineapple_desktop - ERROR - Error conectando a Pineapple: Failed to establish SSH connection to 172.16.42.1:22
+2025-10-08 09:25:50 - pineapple_desktop - INFO - ACTION: Failed to connect to Pineapple at 172.16.42.1
+2025-10-08 09:30:34 - pineapple_desktop - WARNING - tshark not available, limited capture functionality
+2025-10-08 09:30:34 - pineapple_desktop - WARNING - aircrack-ng suite not available, using alternative methods
+2025-10-08 09:30:34 - pineapple_desktop - WARNING - tshark not available, using fallback capture methods
+2025-10-08 09:30:34 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-10-08 09:30:35 - pineapple_desktop - ERROR - Failed to start application: type object 'Icons' has no attribute 'WIFI'
+2025-10-08 09:31:10 - pineapple_desktop - WARNING - tshark not available, limited capture functionality
+2025-10-08 09:31:10 - pineapple_desktop - WARNING - aircrack-ng suite not available, using alternative methods
+2025-10-08 09:31:10 - pineapple_desktop - WARNING - tshark not available, using fallback capture methods
+2025-10-08 09:31:10 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-10-08 09:31:12 - pineapple_desktop - INFO - Application started successfully
+2025-10-08 09:33:38 - pineapple_desktop - INFO - Connection status changed: connecting - Conectando a 172.16.42.1...
+2025-10-08 09:33:40 - pineapple_desktop - INFO - Connection status changed: error - Error conectando a Pineapple: Failed to establish SSH connection to 172.16.42.1:22
+2025-10-08 09:33:40 - pineapple_desktop - ERROR - Error conectando a Pineapple: Failed to establish SSH connection to 172.16.42.1:22
+2025-10-08 09:33:40 - pineapple_desktop - INFO - ACTION: Failed to connect to Pineapple at 172.16.42.1

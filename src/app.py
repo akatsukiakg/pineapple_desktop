@@ -16,6 +16,7 @@ from core.pineapple import PineappleSSH
 from core.connection_manager import ConnectionManager, ConnectionStatus
 from core.scan_manager import ScanManager
 from core.attack_manager import AttackManager
+from core.pineap_manager import PineAPManager
 
 # UI imports
 from ui.modern_main_window import ModernMainWindow
@@ -33,6 +34,7 @@ class PineappleDesktopApp:
         self.connection_manager = ConnectionManager(self.logger)
         self.scan_manager = ScanManager(self.logger)
         self.attack_manager = AttackManager(logger=self.logger)
+        self.pineap_manager = PineAPManager(logger=self.logger)
         
         # Pineapple SSH connection
         self.pineapple_ssh = None
@@ -52,6 +54,8 @@ class PineappleDesktopApp:
         self.connection_manager.add_device_callback(self._on_device_update)
         self.scan_manager.add_callback(self._on_scan_update)
         self.attack_manager.add_callback(self._on_attack_update)
+        self.pineap_manager.add_callback(self._on_pineap_update)
+        self.pineap_manager.add_probe_callback(self._on_probe_request)
     
     def _on_connection_status_change(self, status: ConnectionStatus, message: str):
         """Handle connection status changes"""
@@ -64,8 +68,10 @@ class PineappleDesktopApp:
             # Update attack manager with SSH connection
             if status == ConnectionStatus.CONNECTED and self.pineapple_ssh:
                 self.attack_manager.pineapple_ssh = self.pineapple_ssh
+                self.pineap_manager.pineapple_ssh = self.pineapple_ssh
             elif status == ConnectionStatus.DISCONNECTED:
                 self.attack_manager.pineapple_ssh = None
+                self.pineap_manager.pineapple_ssh = None
     
     def _on_device_update(self, devices):
         """Handle device discovery updates"""
@@ -88,22 +94,43 @@ class PineappleDesktopApp:
         if self.main_window:
             self.main_window.update_attack_status(attack_job)
     
-    def connect_to_pineapple(self, ip: str, username: str = "root", password: str = "pineapplesareyummy"):
-        """Connect to Pineapple device"""
+    def _on_pineap_update(self, event_type: str, data=None):
+        """Handle PineAP updates"""
+        self.logger.debug(f"PineAP update: {event_type}")
+        
+        if self.main_window:
+            self.main_window.update_pineap_status(event_type, data)
+    
+    def _on_probe_request(self, probe):
+        """Handle new probe requests"""
+        self.logger.debug(f"New probe request: {probe.ssid} from {probe.mac}")
+        
+        if self.main_window:
+            self.main_window.update_probe_requests(probe)
+    
+    def connect_to_pineapple(self, connection_info: dict):
+        """Connect to Pineapple device via SSH or Serial"""
         def connect_thread():
-            success = self.connection_manager.connect_to_pineapple(ip, username, password)
+            success = self.connection_manager.connect_to_pineapple(connection_info)
             if success:
-                self.pineapple_ssh = self.connection_manager.pineapple_ssh
-                self.logger.log_user_action(f"Connected to Pineapple at {ip}")
+                if connection_info.get('type') == 'ssh':
+                    self.pineapple_ssh = self.connection_manager.pineapple_ssh
+                    self.logger.log_user_action(f"Connected to Pineapple at {connection_info.get('ip')}")
+                else:  # serial
+                    self.logger.log_user_action(f"Connected to Pineapple via {connection_info.get('com_port')}")
             else:
-                self.logger.log_user_action(f"Failed to connect to Pineapple at {ip}")
+                connection_target = connection_info.get('ip') if connection_info.get('type') == 'ssh' else connection_info.get('com_port')
+                self.logger.log_user_action(f"Failed to connect to Pineapple at {connection_target}")
         
         # Show confirmation modal for security
         if self.main_window:
+            connection_target = connection_info.get('ip') if connection_info.get('type') == 'ssh' else connection_info.get('com_port')
+            connection_type_text = "SSH" if connection_info.get('type') == 'ssh' else "Serial"
+            
             modal = ConfirmationModal(
                 self.main_window.root,
                 title="Conectar a Pineapple",
-                message=f"¿Está seguro de que desea conectarse al dispositivo Pineapple en {ip}?\n\nEsta acción iniciará una conexión SSH y habilitará las funcionalidades de penetration testing.",
+                message=f"¿Está seguro de que desea conectarse al dispositivo Pineapple via {connection_type_text} en {connection_target}?\n\nEsta acción iniciará una conexión y habilitará las funcionalidades de penetration testing.",
                 require_consent=True,
                 consent_text="Confirmo que tengo autorización para usar este dispositivo",
                 on_confirm=lambda: threading.Thread(target=connect_thread, daemon=True).start()

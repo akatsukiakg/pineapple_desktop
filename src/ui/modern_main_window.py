@@ -87,6 +87,7 @@ class ModernMainWindow:
             ("Dashboard", Icons.DASHBOARD, "dashboard"),
             ("Devices", Icons.DEVICES, "devices"),
             ("Scan Hub", Icons.SCAN, "scan"),
+            ("PineAP", Icons.WIFI, "pineap"),
             ("Captures", Icons.CAPTURE, "captures"),
             ("Map", Icons.MAP, "map"),
             ("Logs", Icons.LOGS, "logs"),
@@ -578,6 +579,7 @@ class ModernMainWindow:
             "dashboard": "Dashboard",
             "devices": "Device Manager",
             "scan": "Scan Hub",
+            "pineap": "PineAP Control",
             "captures": "Packet Captures",
             "map": "Network Map",
             "logs": "Audit Logs",
@@ -594,6 +596,8 @@ class ModernMainWindow:
             self._load_devices_content()
         elif view_id == "scan":
             self._load_scan_hub_content()
+        elif view_id == "pineap":
+            self._load_pineap_content()
         elif view_id == "captures":
             self._load_captures_content()
         elif view_id == "map":
@@ -696,6 +700,24 @@ class ModernMainWindow:
         if self.current_view == "scan":
             self._update_attack_status_in_hub(attack_job)
     
+    def update_pineap_status(self, event_type: str, data=None):
+        """Update PineAP status in UI"""
+        # Add to activity feed
+        self._add_activity(f"PineAP {event_type}", "now", "info")
+        
+        # Update PineAP view if active
+        if self.current_view == "pineap":
+            self._update_pineap_view(event_type, data)
+    
+    def update_probe_requests(self, probe):
+        """Update probe requests in UI"""
+        # Add to activity feed
+        self._add_activity(f"Probe: {probe.ssid} from {probe.mac[:8]}...", "now", "info")
+        
+        # Update probe view if active
+        if self.current_view == "pineap":
+            self._update_probe_view(probe)
+    
     def show_toast(self, message: str, toast_type: str = "info"):
         """Show toast notification"""
         # Create a temporary toast notification
@@ -756,12 +778,61 @@ class ModernMainWindow:
         conn_form = ctk.CTkFrame(connection_frame, fg_color="transparent")
         conn_form.pack(fill="x", padx=20, pady=(0, 20))
         
-        # IP input
-        ip_label = ctk.CTkLabel(conn_form, text="Pineapple IP:")
+        # Connection type selector
+        conn_type_label = ctk.CTkLabel(conn_form, text="Connection Type:")
+        conn_type_label.pack(anchor="w", pady=(0, 5))
+        
+        self.connection_type = ctk.CTkSegmentedButton(
+            conn_form,
+            values=["SSH", "Serial"],
+            command=self._on_connection_type_change
+        )
+        self.connection_type.set("SSH")
+        self.connection_type.pack(fill="x", pady=(0, 10))
+        
+        # SSH connection fields
+        self.ssh_frame = ctk.CTkFrame(conn_form, fg_color="transparent")
+        self.ssh_frame.pack(fill="x", pady=(0, 10))
+        
+        ip_label = ctk.CTkLabel(self.ssh_frame, text="Pineapple IP:")
         ip_label.pack(anchor="w", pady=(0, 5))
         
-        self.ip_entry = ctk.CTkEntry(conn_form, placeholder_text="192.168.1.1")
+        self.ip_entry = ctk.CTkEntry(self.ssh_frame, placeholder_text="192.168.1.1")
         self.ip_entry.pack(fill="x", pady=(0, 10))
+        
+        # Serial connection fields
+        self.serial_frame = ctk.CTkFrame(conn_form, fg_color="transparent")
+        
+        com_label = ctk.CTkLabel(self.serial_frame, text="COM Port:")
+        com_label.pack(anchor="w", pady=(0, 5))
+        
+        # COM port selection frame
+        com_select_frame = ctk.CTkFrame(self.serial_frame, fg_color="transparent")
+        com_select_frame.pack(fill="x", pady=(0, 10))
+        
+        self.com_port_var = ctk.StringVar(value="COM3")
+        self.com_port_entry = ctk.CTkEntry(com_select_frame, textvariable=self.com_port_var, width=100)
+        self.com_port_entry.pack(side="left", padx=(0, 10))
+        
+        refresh_com_btn = ctk.CTkButton(
+            com_select_frame,
+            text="🔄 Refresh",
+            command=self._refresh_com_ports,
+            width=80,
+            height=28
+        )
+        refresh_com_btn.pack(side="left")
+        
+        # Baud rate
+        baud_label = ctk.CTkLabel(self.serial_frame, text="Baud Rate:")
+        baud_label.pack(anchor="w", pady=(5, 5))
+        
+        self.baud_rate = ctk.CTkOptionMenu(
+            self.serial_frame,
+            values=["9600", "19200", "38400", "57600", "115200"],
+            variable=ctk.StringVar(value="115200")
+        )
+        self.baud_rate.pack(fill="x", pady=(0, 10))
         
         # Connect button
         if self.connection_status and self.connection_status.value == "connected":
@@ -802,11 +873,37 @@ class ModernMainWindow:
     
     def _connect_pineapple(self):
         """Connect to Pineapple device"""
-        ip = self.ip_entry.get().strip()
-        if ip:
-            self.app.connect_to_pineapple(ip)
-        else:
-            self.show_toast("Please enter Pineapple IP address", "error")
+        connection_type = self.connection_type.get().lower()
+        
+        if connection_type == "ssh":
+            ip = self.ip_entry.get().strip()
+            if not ip:
+                self.show_toast("Please enter Pineapple IP address", "error")
+                return
+            
+            connection_info = {
+                'type': 'ssh',
+                'ip': ip,
+                'username': 'root',
+                'password': 'pineapplesareyummy'
+            }
+        else:  # serial
+            com_port = self.com_port_var.get().strip()
+            baud_rate = int(self.baud_rate.get())
+            
+            if not com_port:
+                self.show_toast("Please enter COM port", "error")
+                return
+            
+            connection_info = {
+                'type': 'serial',
+                'com_port': com_port,
+                'baud_rate': baud_rate,
+                'username': 'root',
+                'password': 'root'
+            }
+        
+        self.app.connect_to_pineapple(connection_info)
     
     def _load_scan_hub_content(self):
         """Load scan hub content"""
@@ -1313,6 +1410,279 @@ class ModernMainWindow:
                 wraplength=400
             )
             section_desc.pack(anchor="w", padx=15, pady=(0, 15))
+    
+    def _load_pineap_content(self):
+        """Load PineAP control content"""
+        # Clear existing content safely
+        try:
+            for widget in self.content_frame.winfo_children():
+                widget.destroy()
+        except Exception as e:
+            print(f"Error clearing widgets: {e}")
+            # Clear the frame completely
+            self.content_frame.destroy()
+            self.content_frame = ctk.CTkScrollableFrame(self.center_panel, **ComponentStyles.SCROLLABLE_FRAME)
+            self.content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # PineAP Status Card
+        status_frame = ctk.CTkFrame(self.content_frame, **ComponentStyles.CARD)
+        status_frame.pack(fill="x", pady=(0, 20))
+        
+        status_title = ctk.CTkLabel(
+            status_frame,
+            text="PineAP Status",
+            font=(Typography.FONT_FAMILY, Typography.SIZE_LG, Typography.WEIGHT_BOLD)
+        )
+        status_title.pack(pady=(20, 10))
+        
+        # Status indicators
+        status_info_frame = ctk.CTkFrame(status_frame, fg_color="transparent")
+        status_info_frame.pack(fill="x", padx=20, pady=(0, 20))
+        
+        # PineAP daemon status
+        daemon_frame = ctk.CTkFrame(status_info_frame, fg_color="transparent")
+        daemon_frame.pack(fill="x", pady=5)
+        
+        daemon_label = ctk.CTkLabel(daemon_frame, text="PineAP Daemon:")
+        daemon_label.pack(side="left")
+        
+        self.daemon_status = ctk.CTkLabel(daemon_frame, text="Unknown", text_color=Colors.TEXT_SECONDARY)
+        self.daemon_status.pack(side="right")
+        
+        # Scanning status
+        scan_frame = ctk.CTkFrame(status_info_frame, fg_color="transparent")
+        scan_frame.pack(fill="x", pady=5)
+        
+        scan_label = ctk.CTkLabel(scan_frame, text="WiFi Scanning:")
+        scan_label.pack(side="left")
+        
+        self.scan_status = ctk.CTkLabel(scan_frame, text="Stopped", text_color=Colors.TEXT_SECONDARY)
+        self.scan_status.pack(side="right")
+        
+        # Control buttons
+        controls_frame = ctk.CTkFrame(status_frame, fg_color="transparent")
+        controls_frame.pack(fill="x", padx=20, pady=(0, 20))
+        
+        # Start/Stop PineAP
+        pineap_btn_frame = ctk.CTkFrame(controls_frame, fg_color="transparent")
+        pineap_btn_frame.pack(fill="x", pady=5)
+        
+        self.start_pineap_btn = PineappleButton(
+            pineap_btn_frame,
+            text="Start PineAP",
+            command=self._start_pineap,
+            style="primary"
+        )
+        self.start_pineap_btn.pack(side="left", padx=(0, 10))
+        
+        self.stop_pineap_btn = PineappleButton(
+            pineap_btn_frame,
+            text="Stop PineAP",
+            command=self._stop_pineap,
+            style="secondary"
+        )
+        self.stop_pineap_btn.pack(side="left")
+        
+        # Scan controls
+        scan_btn_frame = ctk.CTkFrame(controls_frame, fg_color="transparent")
+        scan_btn_frame.pack(fill="x", pady=5)
+        
+        self.start_scan_btn = PineappleButton(
+            scan_btn_frame,
+            text="Start WiFi Scan",
+            command=self._start_wifi_scan,
+            style="primary"
+        )
+        self.start_scan_btn.pack(side="left", padx=(0, 10))
+        
+        self.stop_scan_btn = PineappleButton(
+            scan_btn_frame,
+            text="Stop Scan",
+            command=self._stop_wifi_scan,
+            style="secondary"
+        )
+        self.stop_scan_btn.pack(side="left")
+        
+        # Probe Requests Card
+        probes_frame = ctk.CTkFrame(self.content_frame, **ComponentStyles.CARD)
+        probes_frame.pack(fill="both", expand=True, pady=(0, 20))
+        
+        probes_title = ctk.CTkLabel(
+            probes_frame,
+            text="Probe Requests",
+            font=(Typography.FONT_FAMILY, Typography.SIZE_LG, Typography.WEIGHT_BOLD)
+        )
+        probes_title.pack(pady=(20, 10))
+        
+        # Probe controls
+        probe_controls = ctk.CTkFrame(probes_frame, fg_color="transparent")
+        probe_controls.pack(fill="x", padx=20, pady=(0, 10))
+        
+        self.monitor_probes_btn = PineappleButton(
+            probe_controls,
+            text="Start Monitoring",
+            command=self._start_probe_monitoring,
+            style="primary"
+        )
+        self.monitor_probes_btn.pack(side="left", padx=(0, 10))
+        
+        clear_probes_btn = PineappleButton(
+            probe_controls,
+            text="Clear List",
+            command=self._clear_probes,
+            style="secondary"
+        )
+        clear_probes_btn.pack(side="left")
+        
+        # Probe requests list
+        self.probes_text = ctk.CTkTextbox(probes_frame, height=200)
+        self.probes_text.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+        
+        # Deauth Attack Card
+        deauth_frame = ctk.CTkFrame(self.content_frame, **ComponentStyles.CARD)
+        deauth_frame.pack(fill="x")
+        
+        deauth_title = ctk.CTkLabel(
+            deauth_frame,
+            text="Deauthentication Attack",
+            font=(Typography.FONT_FAMILY, Typography.SIZE_LG, Typography.WEIGHT_BOLD)
+        )
+        deauth_title.pack(pady=(20, 10))
+        
+        # Deauth controls
+        deauth_controls = ctk.CTkFrame(deauth_frame, fg_color="transparent")
+        deauth_controls.pack(fill="x", padx=20, pady=(0, 20))
+        
+        # Target MAC
+        mac_label = ctk.CTkLabel(deauth_controls, text="Target MAC:")
+        mac_label.pack(anchor="w", pady=(0, 5))
+        
+        self.target_mac_entry = ctk.CTkEntry(deauth_controls, placeholder_text="AA:BB:CC:DD:EE:FF")
+        self.target_mac_entry.pack(fill="x", pady=(0, 10))
+        
+        # BSSID
+        bssid_label = ctk.CTkLabel(deauth_controls, text="BSSID:")
+        bssid_label.pack(anchor="w", pady=(0, 5))
+        
+        self.bssid_entry = ctk.CTkEntry(deauth_controls, placeholder_text="AA:BB:CC:DD:EE:FF")
+        self.bssid_entry.pack(fill="x", pady=(0, 10))
+        
+        # Channel
+        channel_label = ctk.CTkLabel(deauth_controls, text="Channel:")
+        channel_label.pack(anchor="w", pady=(0, 5))
+        
+        self.channel_entry = ctk.CTkEntry(deauth_controls, placeholder_text="6")
+        self.channel_entry.pack(fill="x", pady=(0, 10))
+        
+        # Attack button
+        deauth_btn = PineappleButton(
+            deauth_controls,
+            text="Start Deauth Attack",
+            command=self._start_deauth_attack,
+            style="danger"
+        )
+        deauth_btn.pack(pady=10)
+    
+    def _start_pineap(self):
+        """Start PineAP daemon"""
+        if hasattr(self.app, 'pineap_manager'):
+            self.app.pineap_manager.start_pineap()
+            self.show_toast("Starting PineAP daemon...", "info")
+    
+    def _stop_pineap(self):
+        """Stop PineAP daemon"""
+        if hasattr(self.app, 'pineap_manager'):
+            self.app.pineap_manager.stop_pineap()
+            self.show_toast("Stopping PineAP daemon...", "info")
+    
+    def _start_wifi_scan(self):
+        """Start WiFi scanning"""
+        if hasattr(self.app, 'pineap_manager'):
+            self.app.pineap_manager.start_scan(duration=0, frequencies=2)  # Continuous scan, both bands
+            self.show_toast("Starting WiFi scan...", "info")
+    
+    def _stop_wifi_scan(self):
+        """Stop WiFi scanning"""
+        if hasattr(self.app, 'pineap_manager'):
+            self.app.pineap_manager.stop_scan()
+            self.show_toast("Stopping WiFi scan...", "info")
+    
+    def _start_probe_monitoring(self):
+        """Start probe request monitoring"""
+        if hasattr(self.app, 'pineap_manager'):
+            self.app.pineap_manager.start_probe_monitoring()
+            self.show_toast("Starting probe monitoring...", "info")
+    
+    def _clear_probes(self):
+        """Clear probe requests list"""
+        if hasattr(self, 'probes_text'):
+            self.probes_text.delete("1.0", "end")
+    
+    def _start_deauth_attack(self):
+        """Start deauthentication attack"""
+        target_mac = self.target_mac_entry.get().strip()
+        bssid = self.bssid_entry.get().strip()
+        channel = self.channel_entry.get().strip()
+        
+        if not target_mac or not bssid or not channel:
+            self.show_toast("Please fill all fields for deauth attack", "error")
+            return
+        
+        try:
+            channel_int = int(channel)
+            if hasattr(self.app, 'pineap_manager'):
+                self.app.pineap_manager.deauth_attack(target_mac, bssid, channel_int)
+                self.show_toast(f"Starting deauth attack on {target_mac}", "warning")
+        except ValueError:
+            self.show_toast("Channel must be a number", "error")
+    
+    def _on_connection_type_change(self, value):
+        """Handle connection type change"""
+        if value == "SSH":
+            self.ssh_frame.pack(fill="x", pady=(0, 10))
+            self.serial_frame.pack_forget()
+        else:  # Serial
+            self.serial_frame.pack(fill="x", pady=(0, 10))
+            self.ssh_frame.pack_forget()
+    
+    def _refresh_com_ports(self):
+        """Refresh available COM ports"""
+        try:
+            import serial.tools.list_ports
+            ports = [port.device for port in serial.tools.list_ports.comports()]
+            if ports:
+                # Update the entry with the first available port
+                self.com_port_var.set(ports[0])
+                self.show_toast(f"Found {len(ports)} COM port(s): {', '.join(ports)}", "success")
+            else:
+                self.show_toast("No COM ports found", "warning")
+        except ImportError:
+            self.show_toast("pyserial not installed. Install with: pip install pyserial", "error")
+        except Exception as e:
+            self.show_toast(f"Error scanning COM ports: {str(e)}", "error")
+    
+    def _update_pineap_view(self, event_type: str, data=None):
+        """Update PineAP view with status changes"""
+        if event_type == "daemon_started":
+            if hasattr(self, 'daemon_status'):
+                self.daemon_status.configure(text="Running", text_color=Colors.SUCCESS)
+        elif event_type == "daemon_stopped":
+            if hasattr(self, 'daemon_status'):
+                self.daemon_status.configure(text="Stopped", text_color=Colors.TEXT_SECONDARY)
+        elif event_type == "scan_started":
+            if hasattr(self, 'scan_status'):
+                self.scan_status.configure(text="Running", text_color=Colors.SUCCESS)
+        elif event_type == "scan_stopped":
+            if hasattr(self, 'scan_status'):
+                self.scan_status.configure(text="Stopped", text_color=Colors.TEXT_SECONDARY)
+    
+    def _update_probe_view(self, probe):
+        """Update probe requests view"""
+        if hasattr(self, 'probes_text'):
+            timestamp = time.strftime("%H:%M:%S")
+            probe_text = f"[{timestamp}] {probe.ssid} - {probe.mac} (RSSI: {probe.rssi})\n"
+            self.probes_text.insert("end", probe_text)
+            self.probes_text.see("end")
 
     # Footer status bar
     class StatusBar(ctk.CTkFrame):

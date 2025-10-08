@@ -6,7 +6,7 @@ import time
 from typing import Optional
 
 class PineappleSSH:
-    def __init__(self, host: str = "172.16.42.1", username: str = "root", password: Optional[str] = None, port: int = 22, timeout: int = 10):
+    def __init__(self, host: str = "172.16.42.1", username: str = "root", password: Optional[str] = "root", port: int = 22, timeout: int = 10):
         self.host = host
         self.username = username
         self.password = password
@@ -25,6 +25,22 @@ class PineappleSSH:
             self.client = client
             self.connected = True
             return True
+        except paramiko.AuthenticationException as e:
+            print(f"[-] SSH authentication failed: {e}")
+            self.connected = False
+            return False
+        except paramiko.SSHException as e:
+            print(f"[-] SSH connection error: {e}")
+            self.connected = False
+            return False
+        except ConnectionRefusedError as e:
+            print(f"[-] Connection refused: {e}")
+            self.connected = False
+            return False
+        except TimeoutError as e:
+            print(f"[-] Connection timeout: {e}")
+            self.connected = False
+            return False
         except Exception as e:
             print(f"[-] SSH connect error: {e}")
             self.connected = False
@@ -102,3 +118,7 @@ class PineappleSSH:
 
     def pineap_help(self) -> str:
         return self.execute('/usr/bin/pineap help')
+    
+    def run_command(self, command: str, timeout: int = 30) -> str:
+        """Execute a command on the Pineapple device and return the output."""
+        return self.execute(command, timeout)

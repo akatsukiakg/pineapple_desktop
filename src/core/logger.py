@@ -66,3 +66,7 @@ class Logger:
         if details:
             audit_message += f" - {details}"
         self.info(audit_message)
+    
+    def log_user_action(self, action: str, details: str = "") -> None:
+        """Log user action for audit purposes (alias for log_action)"""
+        self.log_action(action, details)
