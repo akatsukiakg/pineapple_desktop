@@ -80,14 +80,17 @@ class ConnectionManager:
                     self.logger.error(f"Error in device callback: {e}")
     
     def connect_to_pineapple(self, connection_info: dict) -> bool:
-        """Connect to Pineapple device via SSH or Serial"""
+        """Connect to Pineapple device via SSH or Serial with enhanced parameters"""
         connection_type = connection_info.get('type', 'ssh')
         
         if connection_type == 'ssh':
             return self._connect_ssh(
-                connection_info.get('ip', ''),
+                connection_info.get('ip', '172.16.42.1'),
                 connection_info.get('username', 'root'),
-                connection_info.get('password', 'root')
+                connection_info.get('password', ''),
+                connection_info.get('port', 22),
+                connection_info.get('timeout', 10),
+                connection_info.get('private_key_path', None)
             )
         elif connection_type == 'serial':
             return self._connect_serial(
@@ -101,19 +104,27 @@ class ConnectionManager:
             self._notify_status_change(ConnectionStatus.ERROR, error_msg)
             return False
     
-    def _connect_ssh(self, ip: str, username: str = "root", password: str = "root") -> bool:
-        """Connect to Pineapple device via SSH"""
+    def _connect_ssh(self, ip: str, username: str = "root", password: str = "root", 
+                     port: int = 22, timeout: int = 10, private_key_path: str = None) -> bool:
+        """Connect to Pineapple device via SSH with enhanced authentication support"""
         try:
             self.connection_type = ConnectionType.SSH
             self._notify_status_change(ConnectionStatus.CONNECTING, f"Conectando a {ip}...")
             
-            # Create SSH connection
+            # Create SSH connection with enhanced parameters
             from .pineapple import PineappleSSH
-            self.pineapple_ssh = PineappleSSH(ip, username, password)
+            self.pineapple_ssh = PineappleSSH(
+                host=ip, 
+                username=username, 
+                password=password,
+                port=port,
+                timeout=timeout,
+                private_key_path=private_key_path
+            )
             
             # First establish the SSH connection
             if not self.pineapple_ssh.connect():
-                raise Exception(f"Failed to establish SSH connection to {ip}:{self.pineapple_ssh.port}")
+                raise Exception(f"Failed to establish SSH connection to {ip}:{port}")
             
             # Test connection with a simple command
             result = self.pineapple_ssh.run_command("echo 'test'")

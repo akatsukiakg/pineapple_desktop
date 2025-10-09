@@ -116,3 +116,21 @@
 2025-10-08 09:33:40 - pineapple_desktop - INFO - Connection status changed: error - Error conectando a Pineapple: Failed to establish SSH connection to 172.16.42.1:22
 2025-10-08 09:33:40 - pineapple_desktop - ERROR - Error conectando a Pineapple: Failed to establish SSH connection to 172.16.42.1:22
 2025-10-08 09:33:40 - pineapple_desktop - INFO - ACTION: Failed to connect to Pineapple at 172.16.42.1
+2025-10-09 08:57:54 - pineapple_desktop - WARNING - tshark not available, limited capture functionality
+2025-10-09 08:57:54 - pineapple_desktop - WARNING - aircrack-ng suite not available, using alternative methods
+2025-10-09 08:57:54 - pineapple_desktop - WARNING - tshark not available, using fallback capture methods
+2025-10-09 08:57:54 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-10-09 08:57:56 - pineapple_desktop - INFO - Application started successfully
+2025-10-09 08:58:44 - pineapple_desktop - ERROR - Error during application shutdown: 'NoneType' object has no attribute 'stop_monitoring'
+2025-10-09 08:58:47 - pineapple_desktop - ERROR - Error during application shutdown: 'NoneType' object has no attribute 'stop_monitoring'
+2025-10-09 08:58:48 - pineapple_desktop - ERROR - Error during application shutdown: 'NoneType' object has no attribute 'stop_monitoring'
+2025-10-09 08:58:49 - pineapple_desktop - ERROR - Error during application shutdown: 'NoneType' object has no attribute 'stop_monitoring'
+2025-10-09 09:01:04 - pineapple_desktop - WARNING - tshark not available, limited capture functionality
+2025-10-09 09:01:04 - pineapple_desktop - WARNING - aircrack-ng suite not available, using alternative methods
+2025-10-09 09:01:04 - pineapple_desktop - WARNING - tshark not available, using fallback capture methods
+2025-10-09 09:01:04 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-10-09 09:01:05 - pineapple_desktop - INFO - Application started successfully
+2025-10-09 09:01:27 - pineapple_desktop - INFO - Connection status changed: connecting - Conectando a 172.16.42..1...
+2025-10-09 09:01:27 - pineapple_desktop - INFO - Connection status changed: error - Error conectando a Pineapple: Failed to establish SSH connection to 172.16.42..1:22
+2025-10-09 09:01:27 - pineapple_desktop - ERROR - Error conectando a Pineapple: Failed to establish SSH connection to 172.16.42..1:22
+2025-10-09 09:01:27 - pineapple_desktop - INFO - ACTION: Failed to connect to Pineapple at 172.16.42..1

@@ -13,6 +13,7 @@ import numpy as np
 from datetime import datetime, timedelta
 import threading
 import time
+import ipaddress
 
 from .design_system import Colors, Typography, ComponentStyles, BorderRadius, Icons
 from .components import (
@@ -797,8 +798,66 @@ class ModernMainWindow:
         ip_label = ctk.CTkLabel(self.ssh_frame, text="Pineapple IP:")
         ip_label.pack(anchor="w", pady=(0, 5))
         
-        self.ip_entry = ctk.CTkEntry(self.ssh_frame, placeholder_text="192.168.1.1")
+        self.ip_entry = ctk.CTkEntry(self.ssh_frame, placeholder_text="172.16.42.1")
         self.ip_entry.pack(fill="x", pady=(0, 10))
+        
+        # SSH Port and Timeout in same row
+        ssh_params_frame = ctk.CTkFrame(self.ssh_frame, fg_color="transparent")
+        ssh_params_frame.pack(fill="x", pady=(0, 10))
+        
+        port_label = ctk.CTkLabel(ssh_params_frame, text="Puerto SSH:")
+        port_label.pack(anchor="w", pady=(0, 5))
+        
+        self.port_entry = ctk.CTkEntry(ssh_params_frame, placeholder_text="22", width=100)
+        self.port_entry.pack(side="left", padx=(0, 10))
+        
+        timeout_label = ctk.CTkLabel(ssh_params_frame, text="Timeout (s):")
+        timeout_label.pack(side="left", padx=(10, 5))
+        
+        self.timeout_entry = ctk.CTkEntry(ssh_params_frame, placeholder_text="10", width=100)
+        self.timeout_entry.pack(side="left")
+        
+        # SSH Authentication section
+        auth_label = ctk.CTkLabel(self.ssh_frame, text="Autenticación SSH:")
+        auth_label.pack(anchor="w", pady=(10, 5))
+        
+        # Username and Password
+        creds_frame = ctk.CTkFrame(self.ssh_frame, fg_color="transparent")
+        creds_frame.pack(fill="x", pady=(0, 10))
+        
+        username_label = ctk.CTkLabel(creds_frame, text="Usuario:")
+        username_label.pack(anchor="w", pady=(0, 5))
+        
+        self.username_entry = ctk.CTkEntry(creds_frame, placeholder_text="root")
+        self.username_entry.pack(fill="x", pady=(0, 5))
+        
+        password_label = ctk.CTkLabel(creds_frame, text="Contraseña:")
+        password_label.pack(anchor="w", pady=(0, 5))
+        
+        self.password_entry = ctk.CTkEntry(creds_frame, placeholder_text="Opcional si usa clave SSH", show="*")
+        self.password_entry.pack(fill="x", pady=(0, 10))
+        
+        # SSH Private Key
+        key_frame = ctk.CTkFrame(self.ssh_frame, fg_color="transparent")
+        key_frame.pack(fill="x", pady=(0, 10))
+        
+        key_label = ctk.CTkLabel(key_frame, text="Clave SSH Privada (Recomendado):")
+        key_label.pack(anchor="w", pady=(0, 5))
+        
+        key_select_frame = ctk.CTkFrame(key_frame, fg_color="transparent")
+        key_select_frame.pack(fill="x")
+        
+        self.private_key_entry = ctk.CTkEntry(key_select_frame, placeholder_text="Ruta a clave privada SSH")
+        self.private_key_entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
+        
+        browse_key_btn = ctk.CTkButton(
+            key_select_frame,
+            text="📁 Buscar",
+            command=self._browse_ssh_key,
+            width=80,
+            height=28
+        )
+        browse_key_btn.pack(side="right")
         
         # Serial connection fields
         self.serial_frame = ctk.CTkFrame(conn_form, fg_color="transparent")
@@ -833,6 +892,9 @@ class ModernMainWindow:
             variable=ctk.StringVar(value="115200")
         )
         self.baud_rate.pack(fill="x", pady=(0, 10))
+        
+        # Initialize connection type display
+        self._on_connection_type_change("SSH")  # Initialize with SSH selected
         
         # Connect button
         if self.connection_status and self.connection_status.value == "connected":
@@ -873,35 +935,95 @@ class ModernMainWindow:
     
     def _connect_pineapple(self):
         """Connect to Pineapple device"""
-        connection_type = self.connection_type.get().lower()
+        # Detect connection type from available UI controls
+        connection_type = (
+            self.connection_type_var.get().lower() if hasattr(self, 'connection_type_var')
+            else (self.connection_type.get().lower() if hasattr(self, 'connection_type') else 'ssh')
+        )
         
         if connection_type == "ssh":
-            ip = self.ip_entry.get().strip()
+            ip = (self.ip_entry.get() if hasattr(self, 'ip_entry') else "172.16.42.1").strip()
             if not ip:
-                self.show_toast("Please enter Pineapple IP address", "error")
+                self.show_toast("Por favor ingrese la dirección IP del Pineapple", "error")
+                return
+            
+            # Validate IPv4 address format to prevent malformed inputs (e.g., 172.16.42..1)
+            try:
+                ip_obj = ipaddress.ip_address(ip)
+            except Exception:
+                self.show_toast("Formato de dirección IP inválido", "error")
+                return
+            
+            # Validate that IP is within the Pineapple network (172.16.42.0/24)
+            pineapple_network = ipaddress.ip_network('172.16.42.0/24')
+            if ip_obj not in pineapple_network:
+                self.show_toast(
+                    f"Advertencia: La IP {ip} no está en la red del Pineapple (172.16.42.0/24). "
+                    "Asegúrese de que su máquina tenga una IP estática en esta red.",
+                    "warning"
+                )
+            
+            # Use provided fields when available; default to common Pineapple values
+            try:
+                port = int((self.port_entry.get() if hasattr(self, 'port_entry') else "22").strip())
+            except ValueError:
+                self.show_toast("El puerto SSH debe ser un número válido", "error")
+                return
+                
+            try:
+                timeout = int((self.timeout_entry.get() if hasattr(self, 'timeout_entry') else "30").strip())
+            except ValueError:
+                self.show_toast("El timeout debe ser un número válido", "error")
+                return
+                
+            username = (self.username_entry.get() if hasattr(self, 'username_entry') else "root").strip()
+            password = (self.password_entry.get() if hasattr(self, 'password_entry') else "").strip()
+            private_key_path = (self.private_key_entry.get() if hasattr(self, 'private_key_entry') else "").strip()
+            
+            if not username:
+                self.show_toast("Por favor ingrese el nombre de usuario SSH", "error")
+                return
+            
+            # Require either password or private key
+            if not password and not private_key_path:
+                self.show_toast("Por favor ingrese una contraseña o seleccione una clave SSH privada", "error")
                 return
             
             connection_info = {
                 'type': 'ssh',
                 'ip': ip,
-                'username': 'root',
-                'password': 'pineapplesareyummy'
+                'port': port,
+                'username': username,
+                'password': password,
+                'timeout': timeout,
+                'private_key_path': private_key_path if private_key_path else None
             }
-        else:  # serial
-            com_port = self.com_port_var.get().strip()
-            baud_rate = int(self.baud_rate.get())
+        elif connection_type == "serial":
+            com_port = (self.com_port_var.get().strip() if hasattr(self, 'com_port_var') else "COM3")
+            baud_rate_val = (self.baud_rate.get() if hasattr(self, 'baud_rate') else "115200")
+            try:
+                baud_rate = int(baud_rate_val)
+            except Exception:
+                self.show_toast("Baud rate must be a number", "error")
+                return
             
             if not com_port:
                 self.show_toast("Please enter COM port", "error")
                 return
             
+            username = (self.username_entry.get() if hasattr(self, 'username_entry') else "root").strip()
+            password = (self.password_entry.get() if hasattr(self, 'password_entry') else "root").strip()
+            
             connection_info = {
                 'type': 'serial',
                 'com_port': com_port,
                 'baud_rate': baud_rate,
-                'username': 'root',
-                'password': 'root'
+                'username': username,
+                'password': password
             }
+        else:
+            self.show_toast("Unsupported connection type", "error")
+            return
         
         self.app.connect_to_pineapple(connection_info)
     
@@ -1598,7 +1720,8 @@ class ModernMainWindow:
     def _start_wifi_scan(self):
         """Start WiFi scanning"""
         if hasattr(self.app, 'pineap_manager'):
-            self.app.pineap_manager.start_scan(duration=0, frequencies=2)  # Continuous scan, both bands
+            from ..core.pineap_manager import ScanFrequency
+            self.app.pineap_manager.start_scan(duration=0, frequency=ScanFrequency.FREQ_BOTH)  # Continuous scan, both bands
             self.show_toast("Starting WiFi scan...", "info")
     
     def _stop_wifi_scan(self):
@@ -1610,7 +1733,7 @@ class ModernMainWindow:
     def _start_probe_monitoring(self):
         """Start probe request monitoring"""
         if hasattr(self.app, 'pineap_manager'):
-            self.app.pineap_manager.start_probe_monitoring()
+            self.app.pineap_manager.start_monitoring()
             self.show_toast("Starting probe monitoring...", "info")
     
     def _clear_probes(self):
@@ -1683,6 +1806,23 @@ class ModernMainWindow:
             probe_text = f"[{timestamp}] {probe.ssid} - {probe.mac} (RSSI: {probe.rssi})\n"
             self.probes_text.insert("end", probe_text)
             self.probes_text.see("end")
+    
+    def _browse_ssh_key(self):
+        """Browse for SSH private key file"""
+        try:
+            from tkinter import filedialog
+            filename = filedialog.askopenfilename(
+                title="Seleccionar clave SSH privada",
+                filetypes=[
+                    ("SSH Keys", "*.pem *.key *.ppk"),
+                    ("All files", "*.*")
+                ]
+            )
+            if filename:
+                self.private_key_entry.delete(0, 'end')
+                self.private_key_entry.insert(0, filename)
+        except Exception as e:
+            self.show_toast(f"Error al seleccionar archivo: {str(e)}", "error")
 
     # Footer status bar
     class StatusBar(ctk.CTkFrame):

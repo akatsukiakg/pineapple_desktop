@@ -3,46 +3,119 @@ from __future__ import annotations
 import paramiko
 import threading
 import time
+import os
+import ipaddress
 from typing import Optional
 
 class PineappleSSH:
-    def __init__(self, host: str = "172.16.42.1", username: str = "root", password: Optional[str] = "root", port: int = 22, timeout: int = 10):
+    def __init__(self, host: str = "172.16.42.1", username: str = "root", password: Optional[str] = None, 
+                 port: int = 22, timeout: int = 10, private_key_path: Optional[str] = None):
         self.host = host
         self.username = username
         self.password = password
         self.port = port
         self.timeout = timeout
+        self.private_key_path = private_key_path
         self.client: Optional[paramiko.SSHClient] = None
         self.lock = threading.Lock()
         self.connected = False
 
-    def connect(self) -> bool:
-        """Establece una conexión SSH al Pineapple."""
+    def _validate_network(self) -> bool:
+        """Valida que la IP esté en la subred 172.16.42.0/24 según documentación técnica."""
         try:
+            ip = ipaddress.IPv4Address(self.host)
+            pineapple_network = ipaddress.IPv4Network("172.16.42.0/24")
+            return ip in pineapple_network
+        except ipaddress.AddressValueError:
+            return False
+
+    def connect(self) -> bool:
+        """Establece una conexión SSH al Pineapple con manejo mejorado de errores."""
+        try:
+            # Validar red según documentación técnica
+            if not self._validate_network():
+                print(f"[-] Warning: IP {self.host} no está en la subred recomendada 172.16.42.0/24")
+            
             client = paramiko.SSHClient()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            client.connect(self.host, port=self.port, username=self.username, password=self.password, timeout=self.timeout)
+            
+            # Configurar autenticación según documentación
+            connect_kwargs = {
+                'hostname': self.host,
+                'port': self.port,
+                'username': self.username,
+                'timeout': self.timeout,
+                'look_for_keys': True,  # Buscar claves SSH automáticamente
+                'allow_agent': True     # Usar SSH agent si está disponible
+            }
+            
+            # Priorizar autenticación por clave SSH (más segura)
+            if self.private_key_path and os.path.exists(self.private_key_path):
+                try:
+                    # Intentar cargar clave privada
+                    private_key = paramiko.RSAKey.from_private_key_file(self.private_key_path)
+                    connect_kwargs['pkey'] = private_key
+                    print(f"[+] Usando clave SSH privada: {self.private_key_path}")
+                except Exception as e:
+                    print(f"[-] Error cargando clave privada {self.private_key_path}: {e}")
+                    # Continuar con autenticación por contraseña si falla la clave
+                    if self.password:
+                        connect_kwargs['password'] = self.password
+            elif self.password:
+                connect_kwargs['password'] = self.password
+            else:
+                # Sin contraseña ni clave, intentar solo con claves del sistema
+                print("[+] Intentando autenticación solo con claves SSH del sistema")
+            
+            client.connect(**connect_kwargs)
             self.client = client
             self.connected = True
+            print(f"[+] Conexión SSH establecida a {self.host}:{self.port}")
             return True
+            
         except paramiko.AuthenticationException as e:
-            print(f"[-] SSH authentication failed: {e}")
+            print(f"[-] Autenticación SSH fallida: {e}")
+            print(f"[-] Autenticación fallida para {self.username}@{self.host}.")
+            print("[-] Verifique las credenciales. Para el Pineapple Nano,")
+            print("[-] el usuario por defecto es 'root' y la contraseña se establece durante la configuración inicial.")
             self.connected = False
             return False
         except paramiko.SSHException as e:
-            print(f"[-] SSH connection error: {e}")
+            print(f"[-] Error de conexión SSH: {e}")
             self.connected = False
             return False
         except ConnectionRefusedError as e:
-            print(f"[-] Connection refused: {e}")
+            print(f"[-] Conexión rechazada a {self.host}:{self.port}: {e}")
+            print("[-] El servicio SSH puede no estar ejecutándose en el Pineapple.")
+            print("[-] Sugerencia: Verificar que el Pineapple esté encendido y SSH habilitado")
             self.connected = False
             return False
         except TimeoutError as e:
-            print(f"[-] Connection timeout: {e}")
+            print(f"[-] Timeout de conexión a {self.host}:{self.port}: {e}")
+            print("[-] Verifique que:")
+            print("[-] 1. El Pineapple esté encendido y conectado")
+            print("[-] 2. Su máquina tenga una IP estática en la red 172.16.42.0/24")
+            print("[-] 3. No haya firewall bloqueando la conexión SSH")
+            self.connected = False
+            return False
+        except OSError as e:
+            if "Network is unreachable" in str(e):
+                print(f"[-] Red inalcanzable para {self.host}: {e}")
+                print("[-] Asegúrese de que su máquina esté configurada con una IP estática")
+                print("[-] en la red 172.16.42.0/24 (ej: 172.16.42.42/24).")
+            elif "No route to host" in str(e):
+                print(f"[-] No hay ruta al host {self.host}: {e}")
+                print("[-] Verifique la conectividad de red y configuración de IP estática")
+            else:
+                print(f"[-] Error de red: {e}")
             self.connected = False
             return False
         except Exception as e:
-            print(f"[-] SSH connect error: {e}")
+            if "idna" in str(e).lower():
+                print(f"[-] Formato de IP inválido: {self.host}")
+                print("[-] Use una dirección IPv4 válida como 172.16.42.1")
+            else:
+                print(f"[-] Error de conexión SSH: {e}")
             self.connected = False
             return False
 

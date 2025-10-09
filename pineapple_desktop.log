@@ -37,3 +37,26 @@
 2025-09-24 21:20:05 - pineapple_desktop - INFO - Starting scapy capture on interface \Device\NPF_{9D5FADBE-C15C-43FA-A9E0-8781EE893614} with filter 'None'
 2025-09-24 21:20:05 - pineapple_desktop - ERROR - Capture capture_0 failed: Scapy capture failed: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket or conf.L3socket6 to access layer 3
 2025-09-24 21:20:06 - pineapple_desktop - INFO - Found 1 active hosts
+2025-10-09 09:12:20 - pineapple_desktop - WARNING - tshark not available, limited capture functionality
+2025-10-09 09:12:20 - pineapple_desktop - WARNING - aircrack-ng suite not available, using alternative methods
+2025-10-09 09:12:20 - pineapple_desktop - WARNING - tshark not available, using fallback capture methods
+2025-10-09 09:12:20 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-10-09 09:12:20 - pineapple_desktop - INFO - Application started successfully
+2025-10-09 09:13:48 - pineapple_desktop - ERROR - Error starting PineAP: 'NoneType' object has no attribute 'run_command'
+2025-10-09 09:17:21 - pineapple_desktop - WARNING - tshark not available, limited capture functionality
+2025-10-09 09:17:21 - pineapple_desktop - WARNING - aircrack-ng suite not available, using alternative methods
+2025-10-09 09:17:21 - pineapple_desktop - WARNING - tshark not available, using fallback capture methods
+2025-10-09 09:17:21 - pineapple_desktop - INFO - Pineapple Desktop Application initialized
+2025-10-09 09:17:22 - pineapple_desktop - INFO - Application started successfully
+2025-10-09 09:18:27 - pineapple_desktop - INFO - Connection status changed: connecting - Conectando a 172.16.42.1...
+2025-10-09 09:18:29 - pineapple_desktop - INFO - Connection status changed: error - Error conectando a Pineapple: Failed to establish SSH connection to 172.16.42.1:1411
+2025-10-09 09:18:29 - pineapple_desktop - ERROR - Error conectando a Pineapple: Failed to establish SSH connection to 172.16.42.1:1411
+2025-10-09 09:18:29 - pineapple_desktop - INFO - ACTION: Failed to connect to Pineapple at 172.16.42.1
+2025-10-09 09:18:37 - pineapple_desktop - INFO - Connection status changed: connecting - Conectando a 172.16.42.1...
+2025-10-09 09:18:38 - pineapple_desktop - INFO - Connection status changed: connected - Conectado a Pineapple en 172.16.42.1
+2025-10-09 09:18:38 - pineapple_desktop - INFO - Successfully connected to Pineapple at 172.16.42.1
+2025-10-09 09:18:38 - pineapple_desktop - INFO - ACTION: Connected to Pineapple at 172.16.42.1
+2025-10-09 09:18:40 - pineapple_desktop - ERROR - Error in device callback: DeviceCard.__init__() missing 3 required positional arguments: 'device_name', 'device_type', and 'status'
+2025-10-09 09:18:51 - pineapple_desktop - ERROR - Error in device callback: DeviceCard.__init__() missing 3 required positional arguments: 'device_name', 'device_type', and 'status'
+2025-10-09 09:19:03 - pineapple_desktop - ERROR - Error in device callback: DeviceCard.__init__() missing 3 required positional arguments: 'device_name', 'device_type', and 'status'
+2025-10-09 09:19:14 - pineapple_desktop - ERROR - Error in device callback: DeviceCard.__init__() missing 3 required positional arguments: 'device_name', 'device_type', and 'status'
