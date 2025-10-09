@@ -111,64 +111,103 @@ class PineAPManager:
                     self.logger.error(f"Error in scan callback: {e}")
 
     def _execute_pineap_command(self, command: str) -> Optional[str]:
-        """Execute PineAP CLI command"""
-        if not self.pineapple_ssh or not self.pineapple_ssh.connected:
+        """Execute PineAP command via SSH using specific methods"""
+        if self.logger:
+            self.logger.debug(f"Executing PineAP command: {command}")
+            
+        if not self.pineapple_ssh:
             if self.logger:
-                self.logger.error("PineAP: SSH not connected")
+                self.logger.error("SSH connection object is None - cannot execute command")
+            return None
+            
+        if not hasattr(self.pineapple_ssh, 'connected') or not self.pineapple_ssh.connected:
+            if self.logger:
+                self.logger.error(f"SSH not connected - cannot execute PineAP command (connected={getattr(self.pineapple_ssh, 'connected', 'N/A')})")
             return None
             
         try:
-            full_command = f"/usr/bin/pineap /tmp/pineap.conf {command}"
-            result = self.pineapple_ssh.run_command(full_command)
+            # Map PineAP manager commands to PineappleSSH methods
+            if command.startswith("run_scan"):
+                parts = command.split()
+                duration = int(parts[1]) if len(parts) > 1 else 0
+                frequency = int(parts[2]) if len(parts) > 2 else 2
+                result = self.pineapple_ssh.run_scan(duration, frequency)
+            elif command == "stop_scan":
+                result = self.pineapple_ssh.stop_scan()
+            elif command == "pause_scan":
+                result = self.pineapple_ssh.pause_scan()
+            elif command == "unpause_scan":
+                result = self.pineapple_ssh.unpause_scan()
+            elif command == "list_probes":
+                result = self.pineapple_ssh.list_probes()
+            elif command == "get_scan_results":
+                result = self.pineapple_ssh.get_scan_results()
+            elif command == "get_status":
+                result = self.pineapple_ssh.get_status()
+            elif command.startswith("logging"):
+                parts = command.split()
+                enable = parts[1] == "on" if len(parts) > 1 else True
+                result = self.pineapple_ssh.logging(enable)
+            else:
+                # For other commands, use run_command directly
+                full_command = f"/usr/bin/pineap /tmp/pineap.conf {command}"
+                result = self.pineapple_ssh.run_command(full_command)
+            
+            if self.logger:
+                self.logger.debug(f"Command '{command}' executed successfully")
+                if result:
+                    self.logger.debug(f"Command result (first 200 chars): {str(result)[:200]}")
+                else:
+                    self.logger.warning(f"Command '{command}' returned empty result")
+                    
             return result
+            
+        except AttributeError as e:
+            if self.logger:
+                self.logger.error(f"SSH object missing required method for command '{command}': {e}")
+            return None
         except Exception as e:
             if self.logger:
-                self.logger.error(f"PineAP command error: {e}")
+                self.logger.error(f"Error executing PineAP command '{command}': {e}")
             return None
 
     def start_pineap(self) -> bool:
-        """Start PineAP daemon"""
-        try:
-            self.status = PineAPStatus.STARTING
-            self._notify_callbacks("status_change", self.status)
+        """Start PineAP service"""
+        if self.logger:
+            self.logger.info("Attempting to start PineAP service")
             
-            # Start PineAP daemon
-            result = self.pineapple_ssh.run_command("/etc/init.d/pineapd start")
-            if result and "OK" in result or "already running" in result.lower():
-                self.status = PineAPStatus.RUNNING
-                self._notify_callbacks("pineap_started")
-                if self.logger:
-                    self.logger.info("PineAP started successfully")
-                return True
-            else:
-                self.status = PineAPStatus.ERROR
-                self._notify_callbacks("pineap_error", "Failed to start PineAP")
-                return False
-                
-        except Exception as e:
-            self.status = PineAPStatus.ERROR
-            self._notify_callbacks("pineap_error", str(e))
+        result = self._execute_pineap_command("start")
+        if result is not None:
+            self.is_running = True
             if self.logger:
-                self.logger.error(f"Error starting PineAP: {e}")
+                self.logger.info("PineAP service started successfully")
+            return True
+        else:
+            if self.logger:
+                self.logger.error("Failed to start PineAP service - command execution failed")
             return False
 
     def stop_pineap(self) -> bool:
-        """Stop PineAP daemon"""
-        try:
-            self._monitoring = False
-            result = self.pineapple_ssh.run_command("/etc/init.d/pineapd stop")
-            self.status = PineAPStatus.STOPPED
-            self._notify_callbacks("pineap_stopped")
+        """Stop PineAP service"""
+        if self.logger:
+            self.logger.info("Attempting to stop PineAP service")
+            
+        result = self._execute_pineap_command("stop")
+        if result is not None:
+            self.is_running = False
             if self.logger:
-                self.logger.info("PineAP stopped")
+                self.logger.info("PineAP service stopped successfully")
             return True
-        except Exception as e:
+        else:
             if self.logger:
-                self.logger.error(f"Error stopping PineAP: {e}")
+                self.logger.error("Failed to stop PineAP service - command execution failed")
             return False
 
     def get_status(self) -> Dict[str, Any]:
         """Get PineAP status"""
+        if self.logger:
+            self.logger.debug("Getting PineAP status")
+            
         result = self._execute_pineap_command("get_status")
         if result:
             try:
@@ -179,10 +218,15 @@ class PineAPManager:
                     "karma_enabled": self.config.karma_enabled,
                     "logging_enabled": self.config.logging_enabled
                 }
+                if self.logger:
+                    self.logger.debug(f"Parsed PineAP status: {status_data}")
                 return status_data
             except Exception as e:
                 if self.logger:
                     self.logger.error(f"Error parsing status: {e}")
+        else:
+            if self.logger:
+                self.logger.warning("No result from PineAP status command")
         return {}
 
     def enable_logging(self) -> bool:
@@ -225,14 +269,22 @@ class PineAPManager:
         """Start WiFi scan"""
         try:
             command = f"run_scan {duration} {frequency.value}"
+            if self.logger:
+                self.logger.info(f"Starting WiFi scan with command: {command}")
+                self.logger.debug(f"Scan parameters - Duration: {duration}s, Frequency: {frequency.name}")
+                
             result = self._execute_pineap_command(command)
             if result:
                 self.status = PineAPStatus.SCANNING
                 self._notify_callbacks("scan_started", {"duration": duration, "frequency": frequency})
                 if self.logger:
-                    self.logger.info(f"Started scan: duration={duration}, frequency={frequency.name}")
+                    self.logger.info(f"WiFi scan started successfully")
+                    self.logger.debug(f"Scan command result: {result}")
                 return True
-            return False
+            else:
+                if self.logger:
+                    self.logger.error("Failed to start WiFi scan - no result from command")
+                return False
         except Exception as e:
             if self.logger:
                 self.logger.error(f"Error starting scan: {e}")
@@ -240,38 +292,86 @@ class PineAPManager:
 
     def stop_scan(self) -> bool:
         """Stop WiFi scan"""
+        if self.logger:
+            self.logger.info("Stopping WiFi scan")
+            
         result = self._execute_pineap_command("stop_scan")
         if result:
             self.status = PineAPStatus.RUNNING
             self._notify_callbacks("scan_stopped")
+            if self.logger:
+                self.logger.info("WiFi scan stopped successfully")
+                self.logger.debug(f"Stop scan result: {result}")
+                
+            # Get final scan results before stopping
+            try:
+                final_results = self.get_scan_results()
+                if self.logger:
+                    self.logger.info(f"Final scan results: {final_results['total_count']} networks found")
+                    if final_results['networks']:
+                        for network in final_results['networks'][:5]:  # Log first 5 networks
+                            self.logger.debug(f"Network found: SSID='{network['ssid']}', BSSID={network['bssid']}, Channel={network['channel']}")
+            except Exception as e:
+                if self.logger:
+                    self.logger.error(f"Error retrieving final scan results: {e}")
+                    
             return True
-        return False
+        else:
+            if self.logger:
+                self.logger.error("Failed to stop WiFi scan - no result from command")
+            return False
 
     def pause_scan(self) -> bool:
         """Pause WiFi scan"""
+        if self.logger:
+            self.logger.info("Pausing WiFi scan")
+            
         result = self._execute_pineap_command("pause_scan")
         if result:
             self._notify_callbacks("scan_paused")
+            if self.logger:
+                self.logger.info("WiFi scan paused successfully")
+                self.logger.debug(f"Pause scan result: {result}")
             return True
-        return False
+        else:
+            if self.logger:
+                self.logger.error("Failed to pause WiFi scan - no result from command")
+            return False
 
     def unpause_scan(self) -> bool:
         """Unpause WiFi scan"""
+        if self.logger:
+            self.logger.info("Resuming WiFi scan")
+            
         result = self._execute_pineap_command("unpause_scan")
         if result:
             self._notify_callbacks("scan_resumed")
+            if self.logger:
+                self.logger.info("WiFi scan resumed successfully")
+                self.logger.debug(f"Resume scan result: {result}")
             return True
-        return False
+        else:
+            if self.logger:
+                self.logger.error("Failed to resume WiFi scan - no result from command")
+            return False
 
     def get_probe_requests(self) -> List[ProbeRequest]:
         """Get current probe requests"""
+        if self.logger:
+            self.logger.debug("Retrieving probe requests from PineAP")
+            
         result = self._execute_pineap_command("list_probes")
         probes = []
         
         if result:
+            if self.logger:
+                self.logger.debug(f"Raw probe data received: {result[:200]}...")  # Log first 200 chars
             try:
                 # Parse probe request output
                 lines = result.strip().split('\n')
+                if self.logger:
+                    self.logger.debug(f"Parsing {len(lines)} lines of probe data")
+                    
                 for line in lines:
                     if line.strip() and not line.startswith('#'):
                         # Parse probe format: SSID MAC TIMESTAMP
@@ -283,11 +383,137 @@ class PineAPManager:
                                 timestamp=parts[2]
                             )
                             probes.append(probe)
+                            if self.logger:
+                                self.logger.debug(f"Parsed probe: SSID={probe.ssid}, MAC={probe.mac}, Time={probe.timestamp}")
+                        else:
+                            if self.logger:
+                                self.logger.warning(f"Invalid probe line format: {line}")
+                                
+                if self.logger:
+                    self.logger.info(f"Successfully parsed {len(probes)} probe requests")
             except Exception as e:
                 if self.logger:
                     self.logger.error(f"Error parsing probes: {e}")
+                    self.logger.error(f"Raw data that failed to parse: {result}")
+        else:
+            if self.logger:
+                self.logger.warning("No probe data received from PineAP")
                     
         return probes
+
+    def get_scan_results(self) -> Dict[str, Any]:
+        """Get WiFi scan results"""
+        if self.logger:
+            self.logger.debug("Retrieving WiFi scan results from PineAP")
+            
+        result = self._execute_pineap_command("get_scan_results")
+        scan_data = {
+            "networks": [],
+            "total_count": 0,
+            "scan_time": time.time(),
+            "status": "no_data"
+        }
+        
+        if result:
+            if self.logger:
+                self.logger.debug(f"Raw scan results received: {result[:500]}...")  # Log first 500 chars
+            try:
+                # Parse scan results - format may vary depending on PineAP implementation
+                lines = result.strip().split('\n')
+                networks = []
+                
+                for line in lines:
+                    if line.strip() and not line.startswith('#'):
+                        # Expected format: SSID BSSID CHANNEL SIGNAL ENCRYPTION
+                        parts = line.split()
+                        if len(parts) >= 4:
+                            network = {
+                                "ssid": parts[0] if parts[0] != "(hidden)" else "",
+                                "bssid": parts[1],
+                                "channel": parts[2],
+                                "signal": parts[3],
+                                "encryption": parts[4] if len(parts) > 4 else "Unknown",
+                                "timestamp": time.time()
+                            }
+                            networks.append(network)
+                            if self.logger:
+                                self.logger.debug(f"Parsed network: SSID={network['ssid']}, BSSID={network['bssid']}, Channel={network['channel']}, Signal={network['signal']}")
+                        else:
+                            if self.logger:
+                                self.logger.warning(f"Invalid scan result line format: {line}")
+                
+                scan_data["networks"] = networks
+                scan_data["total_count"] = len(networks)
+                scan_data["status"] = "success"
+                
+                if self.logger:
+                    self.logger.info(f"Successfully parsed {len(networks)} WiFi networks from scan results")
+                    
+                # Notify callbacks with scan results
+                self._notify_scan_callbacks(scan_data)
+                
+            except Exception as e:
+                if self.logger:
+                    self.logger.error(f"Error parsing scan results: {e}")
+                    self.logger.error(f"Raw scan data that failed to parse: {result}")
+                scan_data["status"] = "parse_error"
+                scan_data["error"] = str(e)
+        else:
+            if self.logger:
+                self.logger.warning("No scan results received from PineAP")
+                
+        return scan_data
+
+    def get_monitoring_status(self) -> Dict[str, Any]:
+        """Get detailed monitoring status and statistics"""
+        if self.logger:
+            self.logger.debug("Retrieving PineAP monitoring status")
+            
+        status_data = {
+            "monitoring_active": self._monitoring,
+            "probe_count": len(self.probe_requests),
+            "recent_probes": [],
+            "ssid_pool_count": len(self.ssid_pool),
+            "pineap_status": self.status.value if self.status else "unknown",
+            "ssh_connected": False,
+            "last_update": time.time()
+        }
+        
+        # Check SSH connection status
+        if self.pineapple_ssh:
+            status_data["ssh_connected"] = hasattr(self.pineapple_ssh, 'is_connected') and self.pineapple_ssh.is_connected()
+            if self.logger:
+                self.logger.debug(f"SSH connection status: {status_data['ssh_connected']}")
+        
+        # Get recent probes (last 10)
+        if self.probe_requests:
+            recent_probes = self.probe_requests[-10:]
+            status_data["recent_probes"] = [
+                {
+                    "ssid": probe.ssid,
+                    "mac": probe.mac,
+                    "timestamp": probe.timestamp
+                }
+                for probe in recent_probes
+            ]
+            if self.logger:
+                self.logger.debug(f"Including {len(recent_probes)} recent probes in status")
+        
+        # Get current PineAP status from device
+        try:
+            pineap_status = self.get_status()
+            if pineap_status:
+                status_data.update(pineap_status)
+                if self.logger:
+                    self.logger.debug(f"Updated status with PineAP device data: {pineap_status}")
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Error getting PineAP device status: {e}")
+        
+        if self.logger:
+            self.logger.info(f"Monitoring status: Active={status_data['monitoring_active']}, Probes={status_data['probe_count']}, SSH={status_data['ssh_connected']}")
+            
+        return status_data
 
     def add_ssid(self, ssid: str) -> bool:
         """Add SSID to pool"""
@@ -367,35 +593,94 @@ class PineAPManager:
         return False
 
     def start_monitoring(self):
-        """Start monitoring probe requests and status"""
-        if self._monitoring:
+        """Start monitoring PineAP status"""
+        if self.logger:
+            self.logger.info("Starting PineAP monitoring")
+            
+        if not self.pineapple_ssh:
+            if self.logger:
+                self.logger.error("Cannot start monitoring: SSH connection is None")
             return
             
         self._monitoring = True
-        
-        # Start probe monitoring thread
-        self._probe_thread = threading.Thread(target=self._monitor_probes, daemon=True)
-        self._probe_thread.start()
-        
+        self._monitor_thread = threading.Thread(target=self._monitor_loop, daemon=True)
+        self._monitor_thread.start()
+        if self.logger:
+            self.logger.info("PineAP monitoring thread started")
+
     def stop_monitoring(self):
-        """Stop monitoring"""
+        """Stop monitoring PineAP status"""
+        if self.logger:
+            self.logger.info("Stopping PineAP monitoring")
+            
         self._monitoring = False
+        if self._monitor_thread and self._monitor_thread.is_alive():
+            self._monitor_thread.join(timeout=5)
+            if self.logger:
+                self.logger.info("PineAP monitoring thread stopped")
+        else:
+            if self.logger:
+                self.logger.debug("PineAP monitoring thread was not running")
+        
+    def _monitor_loop(self):
+        """Monitor PineAP status in background"""
+        if self.logger:
+            self.logger.debug("PineAP monitor loop started")
+            
+        while self._monitoring:
+            try:
+                if not self.pineapple_ssh:
+                    if self.logger:
+                        self.logger.error("Monitor loop: SSH connection is None")
+                    break
+                    
+                # Check PineAP status
+                status = self.get_status()
+                if status and self.logger:
+                    self.logger.debug(f"PineAP status check: {status}")
+                    
+                time.sleep(10)  # Check every 10 seconds
+                
+            except Exception as e:
+                if self.logger:
+                    self.logger.error(f"Error in PineAP monitor loop: {e}")
+                time.sleep(15)  # Wait longer on error
+                
+        if self.logger:
+            self.logger.debug("PineAP monitor loop ended")
         
     def _monitor_probes(self):
         """Monitor probe requests in background"""
+        if self.logger:
+            self.logger.info("Starting probe monitoring thread")
+            
         while self._monitoring:
             try:
+                if self.logger:
+                    self.logger.debug("Checking for new probe requests...")
+                    
                 probes = self.get_probe_requests()
+                new_probes_count = 0
+                
                 for probe in probes:
                     # Check if this is a new probe
                     if not any(p.mac == probe.mac and p.ssid == probe.ssid and p.timestamp == probe.timestamp 
                              for p in self.probe_requests):
                         self.probe_requests.append(probe)
                         self._notify_probe_callbacks(probe)
+                        new_probes_count += 1
+                        if self.logger:
+                            self.logger.info(f"New probe detected: SSID='{probe.ssid}', MAC={probe.mac}")
+                
+                if new_probes_count > 0 and self.logger:
+                    self.logger.info(f"Added {new_probes_count} new probe requests")
                         
                 # Keep only recent probes (last 1000)
                 if len(self.probe_requests) > 1000:
+                    removed_count = len(self.probe_requests) - 1000
                     self.probe_requests = self.probe_requests[-1000:]
+                    if self.logger:
+                        self.logger.debug(f"Trimmed {removed_count} old probe requests, keeping last 1000")
                     
                 time.sleep(2)  # Check every 2 seconds
                 
