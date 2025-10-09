@@ -243,6 +243,13 @@ class PineappleDesktopApp:
             # Save configuration
             self.config_manager.save()
             
+            # Stop PineAP monitoring if active
+            if hasattr(self, 'pineap_manager') and self.pineap_manager:
+                try:
+                    self.pineap_manager.stop_monitoring()
+                except Exception as e:
+                    self.logger.error(f"Error stopping PineAP monitoring: {e}")
+            
             # Stop any running operations
             if self.connection_manager.is_connected():
                 self.disconnect_from_pineapple()

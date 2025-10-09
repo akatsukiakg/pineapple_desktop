@@ -54,3 +54,7 @@ class ConfigManager:
     def update(self, updates: Dict[str, Any]) -> None:
         """Update multiple configuration values"""
         self.config.update(updates)
+    
+    def get_all(self) -> Dict[str, Any]:
+        """Get all configuration values"""
+        return self.config.copy()

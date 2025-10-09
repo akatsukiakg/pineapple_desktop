@@ -1197,9 +1197,47 @@ class ModernMainWindow:
     def _update_scan_hub(self, scan_job):
         """Update scan hub with scan results"""
         if hasattr(self, 'results_text'):
-            result_text = f"[{scan_job.start_time}] {scan_job.scan_type.value} - {scan_job.status.value}\n"
-            if scan_job.result:
-                result_text += f"Result: {scan_job.result}\n"
+            # Format timestamp
+            timestamp = time.strftime("%H:%M:%S", time.localtime(scan_job.start_time))
+            
+            # Basic scan info
+            result_text = f"[{timestamp}] {scan_job.scan_type.value} on {scan_job.target} - {scan_job.status.value}\n"
+            
+            # Show progress if running
+            if scan_job.status.value == "RUNNING":
+                result_text += f"Progress: {scan_job.progress:.1f}%\n"
+            
+            # Show error if failed
+            if scan_job.error_message:
+                result_text += f"Error: {scan_job.error_message}\n"
+            
+            # Show results if completed and has results
+            if scan_job.results and scan_job.status.value == "COMPLETED":
+                result_text += f"Found {len(scan_job.results)} host(s):\n"
+                for result in scan_job.results:
+                    result_text += f"  • {result.ip}"
+                    if result.hostname and result.hostname != result.ip:
+                        result_text += f" ({result.hostname})"
+                    result_text += f" - {result.status}\n"
+                    
+                    # Show open ports if available
+                    if result.ports:
+                        open_ports = [str(port['port']) for port in result.ports if port.get('state') == 'open']
+                        if open_ports:
+                            result_text += f"    Open ports: {', '.join(open_ports[:10])}"
+                            if len(open_ports) > 10:
+                                result_text += f" (+{len(open_ports)-10} more)"
+                            result_text += "\n"
+                    
+                    # Show services if available
+                    if result.services:
+                        services = [f"{svc['port']}/{svc['name']}" for svc in result.services[:3]]
+                        if services:
+                            result_text += f"    Services: {', '.join(services)}"
+                            if len(result.services) > 3:
+                                result_text += f" (+{len(result.services)-3} more)"
+                            result_text += "\n"
+            
             result_text += "\n"
             
             self.results_text.insert("end", result_text)

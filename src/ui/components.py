@@ -21,12 +21,17 @@ class PineappleButton(ctk.CTkButton):
         button_style = styles.get(style, ComponentStyles.BUTTON_PRIMARY).copy()
         button_style.update(kwargs)
         
+        # Initialize _font attribute before calling super().__init__
+        self._font = None
+        
         # Initialize the parent class properly
         super().__init__(parent, text=text, **button_style)
-        
-        # Ensure _font attribute is properly initialized
-        if not hasattr(self, '_font'):
-            self._font = None
+    
+    def __getattr__(self, name):
+        """Handle missing attributes gracefully during shutdown"""
+        if name == '_font':
+            return None
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
 class StatusBadge(ctk.CTkLabel):
     """Status badge component"""
