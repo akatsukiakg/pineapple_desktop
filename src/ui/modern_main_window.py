@@ -239,15 +239,7 @@ class ModernMainWindow:
         """Load dashboard content with hero cards and charts"""
         
         # Clear existing content safely
-        try:
-            for widget in self.content_frame.winfo_children():
-                widget.destroy()
-        except Exception as e:
-            print(f"Error clearing widgets: {e}")
-            # Clear the frame completely
-            self.content_frame.destroy()
-            self.content_frame = ctk.CTkScrollableFrame(self.center_panel, **ComponentStyles.SCROLLABLE_FRAME)
-            self.content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        self._clear_content_frame()
         
         # Hero cards row
         hero_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
@@ -614,15 +606,7 @@ class ModernMainWindow:
         """Load placeholder content for other views"""
         
         # Clear existing content safely
-        try:
-            for widget in self.content_frame.winfo_children():
-                widget.destroy()
-        except Exception as e:
-            print(f"Error clearing widgets: {e}")
-            # Clear the frame completely
-            self.content_frame.destroy()
-            self.content_frame = ctk.CTkScrollableFrame(self.center_panel, **ComponentStyles.SCROLLABLE_FRAME)
-            self.content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        self._clear_content_frame()
         
         placeholder = ctk.CTkLabel(
             self.content_frame,
@@ -662,62 +646,168 @@ class ModernMainWindow:
 
     # Integration methods for connecting UI with application managers
     def update_connection_status(self, status, message: str):
-        """Update connection status in UI"""
-        self.connection_status = status
-        # Update status bar and connection indicators
-        if hasattr(self, 'status_bar'):
-            self.status_bar.update_connection(status, message)
-        
-        # Update navigation items based on connection
-        if hasattr(self, 'nav_buttons'):
-            # Enable/disable device-dependent features
-            device_dependent = ['devices', 'scan', 'captures']
-            for view_id, btn in self.nav_buttons.items():
-                if view_id in device_dependent:
-                    btn.configure(state="normal" if status.value == "connected" else "disabled")
+        """Update connection status in UI with thread-safe handling"""
+        try:
+            # Check if the main window still exists
+            if not hasattr(self, 'root') or not self.root.winfo_exists():
+                return
+            
+            # Schedule UI update on main thread
+            self.root.after(0, self._safe_update_connection_status, status, message)
+        except Exception as e:
+            if hasattr(self, 'logger') and self.logger:
+                self.logger.error(f"Error scheduling connection status update: {e}")
+    
+    def _safe_update_connection_status(self, status, message: str):
+        """Safely update connection status on main thread"""
+        try:
+            self.connection_status = status
+            # Update status bar and connection indicators
+            if hasattr(self, 'status_bar') and self.status_bar.winfo_exists():
+                self.status_bar.update_connection(status, message)
+            
+            # Update navigation items based on connection
+            if hasattr(self, 'nav_buttons'):
+                # Enable/disable device-dependent features
+                device_dependent = ['devices', 'scan', 'captures']
+                for view_id, btn in self.nav_buttons.items():
+                    if view_id in device_dependent and btn.winfo_exists():
+                        btn.configure(state="normal" if status.value == "connected" else "disabled")
+        except Exception as e:
+            if hasattr(self, 'logger') and self.logger:
+                self.logger.error(f"Error in safe connection status update: {e}")
     
     def update_connected_devices(self, devices):
-        """Update connected devices list"""
-        self.devices = devices
-        # Refresh devices view if currently active
-        if self.current_view == "devices":
-            self._load_devices_content()
+        """Update connected devices list with thread-safe UI updates"""
+        try:
+            # Check if the main window still exists
+            if not hasattr(self, 'root') or not self.root.winfo_exists():
+                return
+            
+            # Schedule UI update on main thread
+            self.root.after(0, self._safe_update_devices, devices)
+        except Exception as e:
+            if hasattr(self, 'logger') and self.logger:
+                self.logger.error(f"Error scheduling device update: {e}")
+    
+    def _safe_update_devices(self, devices):
+        """Safely update devices on main thread"""
+        try:
+            # Verify widgets still exist before updating
+            if not hasattr(self, 'content_frame') or not self.content_frame.winfo_exists():
+                return
+                
+            self.devices = devices
+            # Refresh devices view if currently active
+            if hasattr(self, 'current_view') and self.current_view == "devices":
+                self._load_devices_content()
+        except Exception as e:
+            if hasattr(self, 'logger') and self.logger:
+                self.logger.error(f"Error in safe device update: {e}")
     
     def update_scan_status(self, scan_job):
-        """Update scan status in UI"""
-        # Add to activity feed
-        self._add_activity(f"Scan {scan_job.status.value}: {scan_job.target}", "now", "info")
-        
-        # Update scan hub if active
-        if self.current_view == "scan":
-            self._update_scan_hub(scan_job)
+        """Update scan status in UI with thread-safe handling"""
+        try:
+            # Check if the main window still exists
+            if not hasattr(self, 'root') or not self.root.winfo_exists():
+                return
+            
+            # Schedule UI update on main thread
+            self.root.after(0, self._safe_update_scan_status, scan_job)
+        except Exception as e:
+            if hasattr(self, 'logger') and self.logger:
+                self.logger.error(f"Error scheduling scan status update: {e}")
+    
+    def _safe_update_scan_status(self, scan_job):
+        """Safely update scan status on main thread"""
+        try:
+            # Add to activity feed
+            self._add_activity(f"Scan {scan_job.status.value}: {scan_job.target}", "now", "info")
+            
+            # Update scan hub if active
+            if hasattr(self, 'current_view') and self.current_view == "scan":
+                self._update_scan_hub(scan_job)
+        except Exception as e:
+            if hasattr(self, 'logger') and self.logger:
+                self.logger.error(f"Error in safe scan status update: {e}")
     
     def update_attack_status(self, attack_job):
-        """Update attack status in UI"""
-        # Add to activity feed with warning color for attacks
-        self._add_activity(f"Attack {attack_job.status.value}: {attack_job.target.ssid}", "now", "warning")
-        
-        # Update relevant views
-        if self.current_view == "scan":
-            self._update_attack_status_in_hub(attack_job)
+        """Update attack status in UI with thread-safe handling"""
+        try:
+            # Check if the main window still exists
+            if not hasattr(self, 'root') or not self.root.winfo_exists():
+                return
+            
+            # Schedule UI update on main thread
+            self.root.after(0, self._safe_update_attack_status, attack_job)
+        except Exception as e:
+            if hasattr(self, 'logger') and self.logger:
+                self.logger.error(f"Error scheduling attack status update: {e}")
+    
+    def _safe_update_attack_status(self, attack_job):
+        """Safely update attack status on main thread"""
+        try:
+            # Add to activity feed with warning color for attacks
+            self._add_activity(f"Attack {attack_job.status.value}: {attack_job.target.ssid}", "now", "warning")
+            
+            # Update relevant views
+            if hasattr(self, 'current_view') and self.current_view == "scan":
+                self._update_attack_status_in_hub(attack_job)
+        except Exception as e:
+            if hasattr(self, 'logger') and self.logger:
+                self.logger.error(f"Error in safe attack status update: {e}")
     
     def update_pineap_status(self, event_type: str, data=None):
-        """Update PineAP status in UI"""
-        # Add to activity feed
-        self._add_activity(f"PineAP {event_type}", "now", "info")
-        
-        # Update PineAP view if active
-        if self.current_view == "pineap":
-            self._update_pineap_view(event_type, data)
+        """Update PineAP status in UI with thread-safe handling"""
+        try:
+            # Check if the main window still exists
+            if not hasattr(self, 'root') or not self.root.winfo_exists():
+                return
+            
+            # Schedule UI update on main thread
+            self.root.after(0, self._safe_update_pineap_status, event_type, data)
+        except Exception as e:
+            if hasattr(self, 'logger') and self.logger:
+                self.logger.error(f"Error scheduling pineap status update: {e}")
+    
+    def _safe_update_pineap_status(self, event_type: str, data=None):
+        """Safely update PineAP status on main thread"""
+        try:
+            # Add to activity feed
+            self._add_activity(f"PineAP {event_type}", "now", "info")
+            
+            # Update PineAP view if active
+            if hasattr(self, 'current_view') and self.current_view == "pineap":
+                self._update_pineap_view(event_type, data)
+        except Exception as e:
+            if hasattr(self, 'logger') and self.logger:
+                self.logger.error(f"Error in safe pineap status update: {e}")
     
     def update_probe_requests(self, probe):
-        """Update probe requests in UI"""
-        # Add to activity feed
-        self._add_activity(f"Probe: {probe.ssid} from {probe.mac[:8]}...", "now", "info")
-        
-        # Update probe view if active
-        if self.current_view == "pineap":
-            self._update_probe_view(probe)
+        """Update probe requests in UI with thread-safe handling"""
+        try:
+            # Check if the main window still exists
+            if not hasattr(self, 'root') or not self.root.winfo_exists():
+                return
+            
+            # Schedule UI update on main thread
+            self.root.after(0, self._safe_update_probe_requests, probe)
+        except Exception as e:
+            if hasattr(self, 'logger') and self.logger:
+                self.logger.error(f"Error scheduling probe requests update: {e}")
+    
+    def _safe_update_probe_requests(self, probe):
+        """Safely update probe requests on main thread"""
+        try:
+            # Add to activity feed
+            self._add_activity(f"Probe: {probe.ssid} from {probe.mac[:8]}...", "now", "info")
+            
+            # Update probe view if active
+            if hasattr(self, 'current_view') and self.current_view == "pineap":
+                self._update_probe_view(probe)
+        except Exception as e:
+            if hasattr(self, 'logger') and self.logger:
+                self.logger.error(f"Error in safe probe requests update: {e}")
     
     def show_toast(self, message: str, toast_type: str = "info"):
         """Show toast notification"""
@@ -754,15 +844,7 @@ class ModernMainWindow:
     def _load_devices_content(self):
         """Load devices view content"""
         # Clear existing content safely
-        try:
-            for widget in self.content_frame.winfo_children():
-                widget.destroy()
-        except Exception as e:
-            print(f"Error clearing widgets: {e}")
-            # Clear the frame completely
-            self.content_frame.destroy()
-            self.content_frame = ctk.CTkScrollableFrame(self.center_panel, **ComponentStyles.SCROLLABLE_FRAME)
-            self.content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        self._clear_content_frame()
         
         # Connection section
         connection_frame = ctk.CTkFrame(self.content_frame, **ComponentStyles.CARD)
@@ -929,8 +1011,15 @@ class ModernMainWindow:
             devices_scroll = ctk.CTkScrollableFrame(devices_frame)
             devices_scroll.pack(fill="both", expand=True, padx=20, pady=(0, 20))
             
-            for device in self.devices:
-                device_card = DeviceCard(devices_scroll, device=device)
+            for mac, device in self.devices.items():
+                device_card = DeviceCard(
+                    devices_scroll,
+                    device_name=device.hostname,
+                    device_type=device.device_type,
+                    status=device.status,
+                    ip=device.ip,
+                    latency="N/A"
+                )
                 device_card.pack(fill="x", pady=5)
     
     def _connect_pineapple(self):
@@ -1030,15 +1119,7 @@ class ModernMainWindow:
     def _load_scan_hub_content(self):
         """Load scan hub content"""
         # Clear existing content safely
-        try:
-            for widget in self.content_frame.winfo_children():
-                widget.destroy()
-        except Exception as e:
-            print(f"Error clearing widgets: {e}")
-            # Clear the frame completely
-            self.content_frame.destroy()
-            self.content_frame = ctk.CTkScrollableFrame(self.center_panel, **ComponentStyles.SCROLLABLE_FRAME)
-            self.content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        self._clear_content_frame()
         
         # Scan controls
         controls_frame = ctk.CTkFrame(self.content_frame, **ComponentStyles.CARD)
@@ -1107,7 +1188,7 @@ class ModernMainWindow:
             return
         
         # Import scan type enum
-        from src.core.scan_manager import ScanType
+        from core.scan_manager import ScanType
         scan_type = getattr(ScanType, scan_type_str)
         
         self.app.start_scan(scan_type, target)
@@ -1138,15 +1219,7 @@ class ModernMainWindow:
     def _load_captures_content(self):
         """Load packet captures content"""
         # Clear existing content safely
-        try:
-            for widget in self.content_frame.winfo_children():
-                widget.destroy()
-        except Exception as e:
-            print(f"Error clearing widgets: {e}")
-            # Clear the frame completely
-            self.content_frame.destroy()
-            self.content_frame = ctk.CTkScrollableFrame(self.center_panel, **ComponentStyles.SCROLLABLE_FRAME)
-            self.content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        self._clear_content_frame()
         
         # Capture controls
         controls_frame = ctk.CTkFrame(self.content_frame, **ComponentStyles.CARD)
@@ -1247,16 +1320,10 @@ class ModernMainWindow:
     
     def _load_map_content(self):
         """Load network map content"""
+
+
         # Clear existing content safely
-        try:
-            for widget in self.content_frame.winfo_children():
-                widget.destroy()
-        except Exception as e:
-            print(f"Error clearing widgets: {e}")
-            # Clear the frame completely
-            self.content_frame.destroy()
-            self.content_frame = ctk.CTkScrollableFrame(self.center_panel, **ComponentStyles.SCROLLABLE_FRAME)
-            self.content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        self._clear_content_frame()
         
         # Map controls
         controls_frame = ctk.CTkFrame(self.content_frame, **ComponentStyles.CARD)
@@ -1367,15 +1434,7 @@ class ModernMainWindow:
     def _load_settings_content(self):
         """Load settings content"""
         # Clear existing content safely
-        try:
-            for widget in self.content_frame.winfo_children():
-                widget.destroy()
-        except Exception as e:
-            print(f"Error clearing widgets: {e}")
-            # Clear the frame completely
-            self.content_frame.destroy()
-            self.content_frame = ctk.CTkScrollableFrame(self.center_panel, **ComponentStyles.SCROLLABLE_FRAME)
-            self.content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        self._clear_content_frame()
         
         # Settings sections
         sections = [
@@ -1479,15 +1538,7 @@ class ModernMainWindow:
     def _load_help_content(self):
         """Load help and documentation content"""
         # Clear existing content safely
-        try:
-            for widget in self.content_frame.winfo_children():
-                widget.destroy()
-        except Exception as e:
-            print(f"Error clearing widgets: {e}")
-            # Clear the frame completely
-            self.content_frame.destroy()
-            self.content_frame = ctk.CTkScrollableFrame(self.center_panel, **ComponentStyles.SCROLLABLE_FRAME)
-            self.content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        self._clear_content_frame()
         
         # Help sections
         help_frame = ctk.CTkFrame(self.content_frame, **ComponentStyles.CARD)
@@ -1536,15 +1587,7 @@ class ModernMainWindow:
     def _load_pineap_content(self):
         """Load PineAP control content"""
         # Clear existing content safely
-        try:
-            for widget in self.content_frame.winfo_children():
-                widget.destroy()
-        except Exception as e:
-            print(f"Error clearing widgets: {e}")
-            # Clear the frame completely
-            self.content_frame.destroy()
-            self.content_frame = ctk.CTkScrollableFrame(self.center_panel, **ComponentStyles.SCROLLABLE_FRAME)
-            self.content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        self._clear_content_frame()
         
         # PineAP Status Card
         status_frame = ctk.CTkFrame(self.content_frame, **ComponentStyles.CARD)
@@ -1720,7 +1763,7 @@ class ModernMainWindow:
     def _start_wifi_scan(self):
         """Start WiFi scanning"""
         if hasattr(self.app, 'pineap_manager'):
-            from ..core.pineap_manager import ScanFrequency
+            from core.pineap_manager import ScanFrequency
             self.app.pineap_manager.start_scan(duration=0, frequency=ScanFrequency.FREQ_BOTH)  # Continuous scan, both bands
             self.show_toast("Starting WiFi scan...", "info")
     
@@ -1823,6 +1866,34 @@ class ModernMainWindow:
                 self.private_key_entry.insert(0, filename)
         except Exception as e:
             self.show_toast(f"Error al seleccionar archivo: {str(e)}", "error")
+    
+    def _clear_content_frame(self):
+        """Safely clear content frame to prevent TclError"""
+        if not hasattr(self, 'content_frame') or not self.content_frame.winfo_exists():
+            return
+            
+        try:
+            # Get all children before destroying them
+            children = list(self.content_frame.winfo_children())
+            
+            # Destroy children in reverse order to prevent reference issues
+            for widget in reversed(children):
+                try:
+                    if widget.winfo_exists():
+                        widget.destroy()
+                except Exception as e:
+                    # Log but continue with other widgets
+                    print(f"Warning: Could not destroy widget {widget}: {e}")
+                    
+        except Exception as e:
+            print(f"Error clearing content frame: {e}")
+            # As last resort, recreate the frame
+            try:
+                self.content_frame.destroy()
+                self.content_frame = ctk.CTkScrollableFrame(self.center_panel, **ComponentStyles.SCROLLABLE_FRAME)
+                self.content_frame.pack(fill="both", expand=True, padx=20, pady=20)
+            except Exception as recreate_error:
+                print(f"Error recreating content frame: {recreate_error}")
 
     # Footer status bar
     class StatusBar(ctk.CTkFrame):

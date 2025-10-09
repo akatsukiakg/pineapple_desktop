@@ -65,13 +65,18 @@ class PineappleDesktopApp:
             # Update UI connection status
             self.main_window.update_connection_status(status, message)
             
-            # Update attack manager with SSH connection
-            if status == ConnectionStatus.CONNECTED and self.pineapple_ssh:
-                self.attack_manager.pineapple_ssh = self.pineapple_ssh
-                self.pineap_manager.pineapple_ssh = self.pineapple_ssh
+            # Update attack manager and pineap manager with SSH connection
+            if status == ConnectionStatus.CONNECTED:
+                # Get the SSH connection from connection manager
+                ssh_connection = self.connection_manager.pineapple_ssh
+                if ssh_connection:
+                    self.pineapple_ssh = ssh_connection
+                    self.attack_manager.pineapple_ssh = ssh_connection
+                    self.pineap_manager.pineapple_ssh = ssh_connection
             elif status == ConnectionStatus.DISCONNECTED:
                 self.attack_manager.pineapple_ssh = None
                 self.pineap_manager.pineapple_ssh = None
+                self.pineapple_ssh = None
     
     def _on_device_update(self, devices):
         """Handle device discovery updates"""
